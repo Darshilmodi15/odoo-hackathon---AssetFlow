@@ -18,6 +18,7 @@ import {
   Sun,
   User as UserIcon,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth, roleLabel } from "@/context/AuthContext";
@@ -86,7 +87,7 @@ function useTheme() {
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { user, hasRole, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const items = NAV.filter((i) => !i.roles || (user && i.roles.includes(user.role)));
@@ -94,10 +95,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-bold">
+        <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-bold shadow-sm">
           A
         </div>
-        <div className="font-semibold">AssetFlow</div>
+        <div>
+          <div className="font-semibold leading-tight">AssetFlow</div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/50">
+            Operations
+          </div>
+        </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
         {items.map((item) => {
@@ -110,9 +116,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               to={item.to}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                   : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/80",
               )}
             >
@@ -122,7 +128,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="border-t border-sidebar-border p-2 space-y-0.5">
+      <div className="space-y-0.5 border-t border-sidebar-border p-2">
         <button
           onClick={() => {
             navigate({ to: "/settings" });
@@ -169,8 +175,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </div>
           </div>
         )}
-        {/* Suppress unused warning */}
-        <div className="hidden">{hasRole("admin") ? "" : ""}</div>
       </div>
     </div>
   );
@@ -189,7 +193,7 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const employees = useStore(() => store.employees);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/88 px-3 backdrop-blur-xl sm:px-4">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onOpenSidebar}>
         <Menu className="h-5 w-5" />
       </Button>
@@ -199,7 +203,7 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search assets, employees…"
-            className="h-9 w-56 pl-8"
+            className="h-9 w-64 border-input/70 bg-muted/40 pl-8 shadow-inner"
             onKeyDown={(e) => {
               if (e.key === "Enter")
                 navigate({
@@ -232,7 +236,7 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-9 gap-2 px-2">
+              <Button variant="ghost" className="h-9 gap-2 px-2 hover:bg-accent">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="text-xs">
                     {user.name
@@ -296,8 +300,8 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
 export function AppLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <aside className="hidden w-64 shrink-0 border-r border-sidebar-border md:block">
+    <div className="flex min-h-screen w-full bg-background text-foreground">
+      <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar md:block">
         <div className="sticky top-0 h-screen">
           <SidebarContent />
         </div>
@@ -312,7 +316,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </Sheet>
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onOpenSidebar={() => setMobileOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 bg-[radial-gradient(circle_at_top_left,var(--muted),transparent_34rem)] p-4 sm:p-6">
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-border/70 bg-card/75 px-3 py-2 text-xs text-muted-foreground shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium text-foreground">Live workspace</span>
+            <span className="hidden sm:inline">Updated just now</span>
+          </div>
+          {children}
+        </main>
       </div>
     </div>
   );
