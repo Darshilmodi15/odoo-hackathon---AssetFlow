@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -7,6 +8,7 @@ import {
   PackageCheck,
   Wrench,
 } from "lucide-react";
+import { inquiryService } from "@/services";
 
 const features = [
   {
@@ -53,6 +55,56 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [message, setMessage] = useState("");
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitStatus("idle");
+    const newErrors: Record<string, string> = {};
+
+    if (!name.trim()) {
+      newErrors.name = "Name is required";
+    }
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!email.includes("@")) {
+      newErrors.email = "Email must contain @";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    if (!message.trim()) {
+      newErrors.message = "Message is required";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+    setSubmitting(true);
+    try {
+      await inquiryService.submit({ name, email, company: company || undefined, message });
+      setSubmitStatus("success");
+      setName("");
+      setEmail("");
+      setCompany("");
+      setMessage("");
+    } catch (err) {
+      console.error(err);
+      setSubmitStatus("error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b bg-background/90 backdrop-blur">
@@ -77,12 +129,20 @@ function LandingPage() {
               Contact
             </a>
           </div>
-          <Link
-            to="/login"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-          >
-            Sign In
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/login"
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold hover:bg-accent hover:text-accent-foreground"
+            >
+              Log In
+            </Link>
+            <Link
+              to="/signup"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+            >
+              Sign Up
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -106,14 +166,14 @@ function LandingPage() {
               to="/login"
               className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
             >
-              Sign In <ArrowRight className="h-4 w-4" />
+              Log In <ArrowRight className="h-4 w-4" />
             </Link>
-            <a
-              href="#features"
-              className="rounded-md border bg-card px-6 py-3 text-center font-semibold shadow-sm hover:bg-accent"
+            <Link
+              to="/signup"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-input bg-background px-6 py-3 font-semibold hover:bg-accent hover:text-accent-foreground"
             >
-              Explore Platform
-            </a>
+              Sign Up
+            </Link>
           </div>
         </div>
         <div id="product" className="rounded-lg border bg-card p-4 shadow-xl shadow-primary/10">
@@ -216,23 +276,67 @@ function LandingPage() {
               Tell us about your asset and resource management needs.
             </p>
           </div>
-          <form className="grid gap-4 rounded-lg border bg-card p-6 shadow-sm">
-            <input className="rounded-md border bg-background px-4 py-3" placeholder="Name" />
-            <input
-              className="rounded-md border bg-background px-4 py-3"
-              placeholder="Work email"
-              type="email"
-            />
-            <input className="rounded-md border bg-background px-4 py-3" placeholder="Company" />
-            <textarea
-              className="min-h-32 rounded-md border bg-background px-4 py-3"
-              placeholder="Message"
-            />
+          <form
+            onSubmit={handleSubmit}
+            className="grid gap-4 rounded-lg border bg-card p-6 shadow-sm"
+          >
+            <div className="grid gap-1">
+              <input
+                className="rounded-md border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {errors.name && <span className="text-xs text-destructive">{errors.name}</span>}
+            </div>
+
+            <div className="grid gap-1">
+              <input
+                className="rounded-md border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Work email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              {errors.email && <span className="text-xs text-destructive">{errors.email}</span>}
+            </div>
+
+            <div className="grid gap-1">
+              <input
+                className="rounded-md border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-1">
+              <textarea
+                className="min-h-32 rounded-md border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              {errors.message && <span className="text-xs text-destructive">{errors.message}</span>}
+            </div>
+
+            {submitStatus === "success" && (
+              <div className="rounded-md bg-success/15 p-3 text-sm text-success font-medium">
+                Thank you! Your inquiry has been submitted successfully.
+              </div>
+            )}
+            {submitStatus === "error" && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium">
+                Something went wrong. Please try again.
+              </div>
+            )}
+
             <button
-              type="button"
-              className="rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90"
+              type="submit"
+              disabled={submitting}
+              className="rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              Submit Inquiry
+              {submitting ? "Submitting..." : "Submit Inquiry"}
             </button>
           </form>
         </div>
@@ -245,7 +349,12 @@ function LandingPage() {
             <a href="#product">Product</a>
             <a href="#about">Company</a>
             <a href="#contact">Support</a>
-            <Link to="/login">Sign In</Link>
+            <Link to="/login" className="hover:text-foreground">
+              Log In
+            </Link>
+            <Link to="/signup" className="hover:text-foreground">
+              Sign Up
+            </Link>
           </div>
         </div>
       </footer>

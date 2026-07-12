@@ -1035,12 +1035,7 @@ export const reportService = {
 
 // -------- INQUIRIES --------
 export const inquiryService = {
-  async submit(payload: {
-    name: string;
-    email: string;
-    company?: string;
-    message: string;
-  }) {
+  async submit(payload: { name: string; email: string; company?: string; message: string }) {
     return apiClient.post("/inquiries", payload);
-  }
+  },
 };
