@@ -1,8 +1,14 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.db.session import get_db
 
 app = FastAPI(
-    title="AssetFlow API",
+    title=settings.project_name,
     description="Enterprise Asset & Resource Management System Backend",
     version="1.0.0",
 )
@@ -17,15 +23,38 @@ app.add_middleware(
 )
 
 
+def check_database(db: Session) -> str:
+    db.execute(text("SELECT 1"))
+    return "connected"
+
+
 @app.get("/api/health", tags=["Health"])
-def health_check():
+def health_check(db: Session = Depends(get_db)):
     """
-    Service health check endpoint.
+    Service health check endpoint with PostgreSQL connectivity verification.
     """
-    return {"status": "healthy", "database": "disconnected (mock mode)"}
+    try:
+        database_status = check_database(db)
+    except SQLAlchemyError:
+        return {"status": "error", "database": "disconnected"}
+
+    return {"status": "ok", "database": database_status}
+
+
+@app.get("/api/health/db-status", tags=["Health"])
+def database_health_check(db: Session = Depends(get_db)):
+    """
+    Dedicated PostgreSQL connectivity check used before API integration work.
+    """
+    try:
+        database_status = check_database(db)
+    except SQLAlchemyError:
+        return {"status": "error", "database": "disconnected"}
+
+    return {"status": "ok", "database": database_status}
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
