@@ -10,7 +10,7 @@
 * **Event**: Odoo Hackathon
 * **Team Members**:
   * **Darshil** (Lead)
-  * **Keshavi**
+  * **Keshvi**
   * **Prachi**
   * **Rudra**
 
