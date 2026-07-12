@@ -51,6 +51,12 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  {
+    to: "/employee/dashboard",
+    label: "Employee Portal",
+    icon: LayoutDashboard,
+    roles: ["employee"],
+  },
   { to: "/organization", label: "Organization Setup", icon: Building2, roles: ["admin"] },
   { to: "/assets", label: "Assets", icon: Package },
   { to: "/allocations", label: "Allocations & Transfers", icon: ArrowLeftRight },
@@ -64,6 +70,7 @@ const NAV: NavItem[] = [
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/employee/dashboard": "Employee Portal",
   "/organization": "Organization Setup",
   "/assets": "Assets",
   "/allocations": "Allocations & Transfers",
@@ -203,7 +210,7 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search assets, employees…"
-            className="h-9 w-64 border-input/70 bg-muted/40 pl-8 shadow-inner"
+            className="h-9 w-full max-w-64 border-input/70 bg-muted/40 pl-8 shadow-inner"
             onKeyDown={(e) => {
               if (e.key === "Enter")
                 navigate({
