@@ -70,3 +70,7 @@ def check_role(allowed_roles: list[str]):
             )
         return current_user
     return dependency
+
+# Compatibility alias
+get_db = get_session
+
