@@ -287,7 +287,10 @@ function ReportsPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Line type="monotone" dataKey="utilized" stroke="var(--primary)" strokeWidth={2} />
@@ -319,7 +322,10 @@ function ReportsPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
               </BarChart>
@@ -343,7 +349,10 @@ function ReportsPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Bar dataKey="count" fill="var(--warning)" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -369,7 +378,10 @@ function ReportsPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
@@ -393,7 +405,10 @@ function ReportsPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Bar dataKey="allocated" fill="var(--primary)" radius={[6, 6, 0, 0]} />
               </BarChart>

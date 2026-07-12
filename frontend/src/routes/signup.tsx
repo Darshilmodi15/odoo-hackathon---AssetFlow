@@ -76,7 +76,12 @@ function SignupPage() {
         navigate({ to: "/dashboard" });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed");
+      const message = err instanceof Error ? err.message : "Signup failed";
+      if (message.toLowerCase().includes("email") && message.toLowerCase().includes("exists")) {
+        setError("An account with this email already exists. Please sign in instead.");
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

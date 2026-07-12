@@ -46,7 +46,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text}`);
+    let message = text || res.statusText || "Request failed";
+    try {
+      const payload = JSON.parse(text) as { detail?: unknown; message?: unknown };
+      const detail = payload.detail ?? payload.message;
+      if (typeof detail === "string") message = detail;
+      else if (detail && typeof detail === "object" && "message" in detail) {
+        const nested = (detail as { message?: unknown }).message;
+        if (typeof nested === "string") message = nested;
+      }
+    } catch {
+      // Keep raw text when response is not JSON.
+    }
+    throw new Error(message);
   }
 
   // 204 No Content
