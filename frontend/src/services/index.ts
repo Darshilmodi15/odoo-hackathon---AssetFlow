@@ -32,6 +32,40 @@ type ApiLoginResponse = {
   user: ApiUser;
 };
 
+type ApiDepartment = {
+  id: string;
+  name: string;
+  code: string;
+  head_id?: string | null;
+  parent_id?: string | null;
+  status: Department["status"];
+};
+
+type ApiCategory = {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: AssetCategory["status"];
+};
+
+type ApiAsset = {
+  id: string;
+  tag: string;
+  name: string;
+  category_id: string;
+  serial_number: string;
+  department_id?: string | null;
+  assigned_to_id?: string | null;
+  location: string;
+  condition: Asset["condition"];
+  status: Asset["status"];
+  shared: boolean;
+  acquisition_date: string;
+  acquisition_cost: number | string;
+  notes?: string | null;
+  updated_at: string;
+};
+
 type ApiAllocation = {
   id: string;
   asset_id: string;
@@ -71,6 +105,47 @@ type ApiBooking = {
   notes?: string | null;
   status: Booking["status"];
 };
+
+
+function mapDepartment(d: ApiDepartment): Department {
+  return {
+    id: d.id,
+    name: d.name,
+    code: d.code,
+    headId: d.head_id ?? undefined,
+    parentId: d.parent_id ?? undefined,
+    status: d.status,
+  };
+}
+
+function mapCategory(c: ApiCategory): AssetCategory {
+  return {
+    id: c.id,
+    name: c.name,
+    description: c.description ?? undefined,
+    status: c.status,
+  };
+}
+
+function mapAsset(a: ApiAsset): Asset {
+  return {
+    id: a.id,
+    tag: a.tag,
+    name: a.name,
+    categoryId: a.category_id,
+    serialNumber: a.serial_number,
+    departmentId: a.department_id ?? undefined,
+    assignedToId: a.assigned_to_id ?? undefined,
+    location: a.location,
+    condition: a.condition,
+    status: a.status,
+    shared: a.shared,
+    acquisitionDate: a.acquisition_date,
+    acquisitionCost: Number(a.acquisition_cost),
+    notes: a.notes ?? undefined,
+    updatedAt: a.updated_at,
+  };
+}
 
 function mapUser(user: ApiUser): User {
   return {
@@ -217,15 +292,37 @@ export const departmentService = {
       await mockDelay(50);
       return store.departments;
     }
-    return apiClient.get("/departments");
+    return (await apiClient.get<ApiDepartment[]>("/departments")).map(mapDepartment);
   },
   async create(d: Omit<Department, "id">): Promise<Department> {
+    if (!USE_MOCKS) {
+      return mapDepartment(
+        await apiClient.post<ApiDepartment>("/departments", {
+          name: d.name,
+          code: d.code,
+          head_id: d.headId,
+          parent_id: d.parentId,
+          status: d.status,
+        }),
+      );
+    }
     const dep = { ...d, id: store.nextId("d") };
     store.departments.push(dep);
     store.emit();
     return dep;
   },
   async update(id: string, patch: Partial<Department>) {
+    if (!USE_MOCKS) {
+      return mapDepartment(
+        await apiClient.patch<ApiDepartment>(`/departments/${id}`, {
+          name: patch.name,
+          code: patch.code,
+          head_id: patch.headId,
+          parent_id: patch.parentId,
+          status: patch.status,
+        }),
+      );
+    }
     const i = store.departments.findIndex((d) => d.id === id);
     if (i >= 0) store.departments[i] = { ...store.departments[i], ...patch };
     store.emit();
@@ -240,15 +337,33 @@ export const categoryService = {
       await mockDelay(50);
       return store.categories;
     }
-    return apiClient.get("/categories");
+    return (await apiClient.get<ApiCategory[]>("/categories")).map(mapCategory);
   },
   async create(c: Omit<AssetCategory, "id">) {
+    if (!USE_MOCKS) {
+      return mapCategory(
+        await apiClient.post<ApiCategory>("/categories", {
+          name: c.name,
+          description: c.description,
+          status: c.status,
+        }),
+      );
+    }
     const cat = { ...c, id: store.nextId("c") };
     store.categories.push(cat);
     store.emit();
     return cat;
   },
   async update(id: string, patch: Partial<AssetCategory>) {
+    if (!USE_MOCKS) {
+      return mapCategory(
+        await apiClient.patch<ApiCategory>(`/categories/${id}`, {
+          name: patch.name,
+          description: patch.description,
+          status: patch.status,
+        }),
+      );
+    }
     const i = store.categories.findIndex((c) => c.id === id);
     if (i >= 0) store.categories[i] = { ...store.categories[i], ...patch };
     store.emit();
@@ -302,16 +417,33 @@ export const assetService = {
       await mockDelay(50);
       return store.assets;
     }
-    return apiClient.get("/assets");
+    return (await apiClient.get<ApiAsset[]>("/assets")).map(mapAsset);
   },
   async get(id: string): Promise<Asset | undefined> {
     if (USE_MOCKS) return store.assets.find((a) => a.id === id);
-    return apiClient.get(`/assets/${id}`);
+    return mapAsset(await apiClient.get<ApiAsset>(`/assets/${id}`));
   },
   async create(
     input: Omit<Asset, "id" | "tag" | "updatedAt" | "status"> & { status?: AssetStatus },
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      return mapAsset(
+        await apiClient.post<ApiAsset>("/assets", {
+          name: input.name,
+          category_id: input.categoryId,
+          serial_number: input.serialNumber,
+          department_id: input.departmentId,
+          location: input.location,
+          condition: input.condition,
+          shared: input.shared,
+          acquisition_date: input.acquisitionDate,
+          acquisition_cost: input.acquisitionCost,
+          notes: input.notes,
+          status: input.status,
+        }),
+      );
+    }
     const asset: Asset = {
       ...input,
       id: store.nextId("a"),
@@ -333,6 +465,24 @@ export const assetService = {
     return asset;
   },
   async update(id: string, patch: Partial<Asset>) {
+    if (!USE_MOCKS) {
+      return mapAsset(
+        await apiClient.patch<ApiAsset>(`/assets/${id}`, {
+          name: patch.name,
+          category_id: patch.categoryId,
+          serial_number: patch.serialNumber,
+          department_id: patch.departmentId,
+          assigned_to_id: patch.assignedToId,
+          location: patch.location,
+          condition: patch.condition,
+          status: patch.status,
+          shared: patch.shared,
+          acquisition_date: patch.acquisitionDate,
+          acquisition_cost: patch.acquisitionCost,
+          notes: patch.notes,
+        }),
+      );
+    }
     const i = store.assets.findIndex((a) => a.id === id);
     if (i < 0) throw new Error("Not found");
     store.assets[i] = { ...store.assets[i], ...patch, updatedAt: new Date().toISOString() };
