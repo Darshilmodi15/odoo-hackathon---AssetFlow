@@ -11,6 +11,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 
+# SQLite compatibility patch for postgresql.UUID
+from sqlalchemy.dialects import postgresql
+from app.db.base import GUID
+class SQLiteUUID(GUID):
+    cache_ok = True
+    def __init__(self, *args, **kwargs):
+        kwargs.pop("as_uuid", None)
+        super().__init__(*args, **kwargs)
+postgresql.UUID = SQLiteUUID
+
 from app.main import app
 from app.db.session import get_session
 from app.db.base import Base

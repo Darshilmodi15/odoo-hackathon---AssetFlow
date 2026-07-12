@@ -1,6 +1,6 @@
 """create asset workflow tables
 
-Revision ID: 20260712_0002
+Revision ID: 20260712_0003
 Revises: 7086c3895342
 Create Date: 2026-07-12 14:00:00.000000
 
@@ -11,42 +11,13 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "20260712_0002"
+revision: str = "20260712_0003"
 down_revision: Union[str, None] = "7086c3895342"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "assets",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("tag", sa.String(32), nullable=False),
-        sa.Column("name", sa.String(160), nullable=False),
-        sa.Column("category_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("serial_number", sa.String(120), nullable=False),
-        sa.Column("department_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("assigned_to_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("location", sa.String(160), nullable=False),
-        sa.Column("condition", sa.String(32), nullable=False),
-        sa.Column("status", sa.String(32), nullable=False),
-        sa.Column("shared", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("acquisition_date", sa.Date(), nullable=False),
-        sa.Column("acquisition_cost", sa.Numeric(12, 2), nullable=False, server_default="0"),
-        sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("condition IN ('excellent','good','fair','poor')", name="ck_assets_condition"),
-        sa.CheckConstraint("status IN ('available','allocated','reserved','under_maintenance','lost','retired','disposed')", name="ck_assets_status"),
-        sa.ForeignKeyConstraint(["assigned_to_id"], ["users.id"]),
-        sa.ForeignKeyConstraint(["category_id"], ["asset_categories.id"]),
-        sa.ForeignKeyConstraint(["department_id"], ["departments.id"]),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(op.f("ix_assets_tag"), "assets", ["tag"], unique=True)
-    op.create_index(op.f("ix_assets_serial_number"), "assets", ["serial_number"], unique=True)
-    op.create_index(op.f("ix_assets_status"), "assets", ["status"])
-    op.create_index("ix_assets_shared_status", "assets", ["shared", "status"])
-
     op.create_table(
         "allocations",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
@@ -169,8 +140,3 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_allocations_employee_id"), table_name="allocations")
     op.drop_index(op.f("ix_allocations_asset_id"), table_name="allocations")
     op.drop_table("allocations")
-    op.drop_index("ix_assets_shared_status", table_name="assets")
-    op.drop_index(op.f("ix_assets_status"), table_name="assets")
-    op.drop_index(op.f("ix_assets_serial_number"), table_name="assets")
-    op.drop_index(op.f("ix_assets_tag"), table_name="assets")
-    op.drop_table("assets")
