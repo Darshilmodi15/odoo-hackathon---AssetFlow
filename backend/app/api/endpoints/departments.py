@@ -1,79 +1,47 @@
+from typing import List
 import uuid
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.models.department import Department
+from app.db.session import get_session
 from app.models.user import User
+from app.models.organization import Department
 from app.schemas.department import DepartmentCreate, DepartmentUpdate, DepartmentResponse
+from app.services.department import DepartmentService
 
 router = APIRouter()
 
 @router.get("", response_model=List[DepartmentResponse])
 def read_departments(
-    db: Session = Depends(deps.get_db),
+    db: Session = Depends(get_session),
     current_user: User = Depends(deps.get_current_user),
-) -> Any:
+):
     """
-    Retrieve departments. (All authenticated users can list)
+    Retrieve departments.
     """
-    departments = db.query(Department).all()
-    return departments
+    return DepartmentService.get_all(db)
 
-@router.post("", response_model=DepartmentResponse)
+@router.post("", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
 def create_department(
-    *,
-    db: Session = Depends(deps.get_db),
     department_in: DepartmentCreate,
-    current_user: User = Depends(deps.check_role(["admin"])),
-) -> Any:
+    db: Session = Depends(get_session),
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager"])),
+):
     """
-    Create new department. (Admin only)
+    Create new department.
     """
-    department = db.query(Department).filter(Department.name == department_in.name).first()
-    if department:
-        raise HTTPException(
-            status_code=400,
-            detail="The department with this name already exists.",
-        )
-    
-    # Check parent_id if provided
-    if department_in.parent_id:
-        parent = db.query(Department).filter(Department.id == department_in.parent_id).first()
-        if not parent:
-            raise HTTPException(status_code=400, detail="Parent department not found")
-
-    # Check head_id if provided
-    if department_in.head_id:
-        head = db.query(User).filter(User.id == department_in.head_id).first()
-        if not head:
-            raise HTTPException(status_code=400, detail="Department head user not found")
-            
-    new_dept_id = "d_" + uuid.uuid4().hex[:8]
-    db_obj = Department(
-        id=new_dept_id,
-        name=department_in.name,
-        code=department_in.code,
-        head_id=department_in.head_id,
-        parent_id=department_in.parent_id,
-        status=department_in.status or "active"
-    )
-    db.add(db_obj)
-    db.commit()
-    db.refresh(db_obj)
-    return db_obj
+    return DepartmentService.create(db, department_in)
 
 @router.put("/{id}", response_model=DepartmentResponse)
 def update_department(
-    *,
-    db: Session = Depends(deps.get_db),
-    id: str,
+    id: uuid.UUID,
     department_in: DepartmentUpdate,
-    current_user: User = Depends(deps.check_role(["admin"])),
-) -> Any:
+    db: Session = Depends(get_session),
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager"])),
+):
     """
-    Update a department. (Admin only)
+    Update a department.
     """
     department = db.query(Department).filter(Department.id == id).first()
     if not department:
@@ -98,7 +66,6 @@ def update_department(
     for field in update_data:
         setattr(department, field, update_data[field])
         
-    db.add(department)
     db.commit()
     db.refresh(department)
     return department
