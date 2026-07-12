@@ -1,10 +1,30 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.router import api_router
+from app.core.database import engine, SessionLocal
+from app.models.base import Base
+from app.db.seed import seed_db
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create database tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Run database seeder
+    db = SessionLocal()
+    try:
+        seed_db(db)
+    finally:
+        db.close()
+    yield
 
 app = FastAPI(
     title="AssetFlow API",
     description="Enterprise Asset & Resource Management System Backend",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Set up CORS middleware for development frontend communication
@@ -16,14 +36,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/api/health", tags=["Health"])
-def health_check():
-    """
-    Service health check endpoint.
-    """
-    return {"status": "healthy", "database": "disconnected (mock mode)"}
-
+# Include all API routers under the '/api' prefix
+app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
