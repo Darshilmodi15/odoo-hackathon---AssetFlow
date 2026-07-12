@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
+from app.db import seed_admin
 from app.db.base import Base
 from app.db.session import get_session
 from app.main import app
@@ -34,8 +35,11 @@ def client():
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
+    app.state.test_engine = engine
     yield TestClient(app)
     app.dependency_overrides.clear()
+    if hasattr(app.state, "test_engine"):
+        delattr(app.state, "test_engine")
     Base.metadata.drop_all(bind=engine)
 
 
@@ -80,6 +84,50 @@ def test_auth_and_role_promotion(client, seeded):
     promoted = client.patch(f"/api/users/{seeded['employee']}/role", json={"role": "asset_manager"}, headers=admin_headers)
     assert promoted.status_code == 200
     assert promoted.json()["role"] == "asset_manager"
+
+
+def test_seed_admin_long_password_and_login(client, monkeypatch):
+    long_password = "admin-password-" + ("x" * 100)
+    monkeypatch.setenv("INITIAL_ADMIN_EMAIL", "seed-admin@example.com")
+    monkeypatch.setenv("INITIAL_ADMIN_PASSWORD", long_password)
+    monkeypatch.setenv("INITIAL_ADMIN_NAME", "Seed Admin")
+    monkeypatch.setattr(seed_admin, "engine", app.state.test_engine)
+
+    assert seed_admin.main() == 0
+    assert seed_admin.main() == 0
+
+    res = client.post(
+        "/api/auth/login",
+        json={"email": "seed-admin@example.com", "password": long_password},
+    )
+    assert res.status_code == 200
+    assert res.json()["user"]["role"] == "admin"
+
+    me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {res.json()['access_token']}"})
+    assert me.status_code == 200
+    assert me.json()["email"] == "seed-admin@example.com"
+
+
+def test_long_employee_signup_login_and_argon2_storage(client):
+    long_password = "employee-password-" + ("y" * 100)
+    signup = client.post(
+        "/api/auth/signup",
+        json={"name": "Long Password", "email": "long@example.com", "password": long_password},
+    )
+    assert signup.status_code == 201
+
+    override = app.dependency_overrides[get_session]
+    db: Session = next(override())
+    user = db.query(User).filter(User.email == "long@example.com").one()
+    assert user.hashed_password.startswith("$argon2")
+    assert verify_password(long_password, user.hashed_password) is True
+    db.close()
+
+    login_res = client.post(
+        "/api/auth/login",
+        json={"email": "long@example.com", "password": long_password},
+    )
+    assert login_res.status_code == 200
 
 
 def test_allocation_return_transfer_and_booking(client, seeded):
