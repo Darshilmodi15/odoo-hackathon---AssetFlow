@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.api.routes import allocations, auth, bookings, transfers, users
 from app.core.config import settings
 from app.db.session import get_session
 
@@ -16,11 +17,23 @@ app = FastAPI(
 # Set up CORS middleware for development frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        settings.frontend_origin,
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router, prefix=settings.api_v1_str)
+app.include_router(users.router, prefix=settings.api_v1_str)
+app.include_router(allocations.router, prefix=settings.api_v1_str)
+app.include_router(transfers.router, prefix=settings.api_v1_str)
+app.include_router(bookings.router, prefix=settings.api_v1_str)
 
 
 def check_database(db: Session) -> str:
