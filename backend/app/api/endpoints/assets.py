@@ -1,57 +1,100 @@
-from typing import List
+"""Asset HTTP endpoints – routes only, no business logic."""
 import uuid
-from fastapi import APIRouter, Depends, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
 from app.api import deps
+from app.db.session import get_db
 from app.models.user import User
-from app.schemas.asset import AssetCreate, AssetUpdate, AssetResponse
+from app.schemas.asset import (
+    AssetCreate,
+    AssetUpdate,
+    AssetStatusPatch,
+    AssetResponse,
+    AssetListResponse,
+)
 from app.services.asset import AssetService
 
 router = APIRouter()
 
-@router.get("", response_model=List[AssetResponse])
-def get_assets(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
-):
-    """
-    Get all assets.
-    """
-    return AssetService.get_all(db)
 
-@router.get("/{id}", response_model=AssetResponse)
-def get_asset_by_id(
-    id: uuid.UUID,
+@router.get("", response_model=AssetListResponse)
+def list_assets(
+    search: Optional[str] = Query(None, description="Search by name, tag, or serial number"),
+    tag: Optional[str] = Query(None, description="Filter by asset tag"),
+    serial_number: Optional[str] = Query(None, description="Filter by serial number"),
+    category_id: Optional[uuid.UUID] = Query(None),
+    department_id: Optional[uuid.UUID] = Query(None),
+    status: Optional[str] = Query(None),
+    condition: Optional[str] = Query(None),
+    location: Optional[str] = Query(None),
+    is_shared: Optional[bool] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=200),
+    sort_by: str = Query("name"),
+    order: str = Query("asc"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
 ):
-    """
-    Get asset by ID.
-    """
-    return AssetService.get_by_id(db, id)
+    """List assets with rich filtering, pagination, and sorting."""
+    items, total = AssetService.get_list(
+        db,
+        search=search,
+        tag=tag,
+        serial_number=serial_number,
+        category_id=category_id,
+        department_id=department_id,
+        status=status,
+        condition=condition,
+        location=location,
+        is_shared=is_shared,
+        skip=skip,
+        limit=limit,
+        sort_by=sort_by,
+        order=order,
+    )
+    return AssetListResponse(items=items, total=total, skip=skip, limit=limit)
+
+
+@router.get("/{asset_id}", response_model=AssetResponse)
+def get_asset(
+    asset_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """Retrieve a single asset by ID."""
+    return AssetService.get_by_id(db, asset_id)
+
 
 @router.post("", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
 def create_asset(
     asset_in: AssetCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager"])),
 ):
-    """
-    Create a new asset.
-    """
+    """Register a new asset. Tag is auto-generated."""
     return AssetService.create(db, asset_in, current_user)
 
-@router.put("/{id}", response_model=AssetResponse)
+
+@router.put("/{asset_id}", response_model=AssetResponse)
 def update_asset(
-    id: uuid.UUID,
+    asset_id: uuid.UUID,
     asset_in: AssetUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager"])),
 ):
-    """
-    Update an existing asset's details.
-    """
-    return AssetService.update(db, id, asset_in, current_user)
+    """Update asset details. Status transitions through workflow endpoints only."""
+    return AssetService.update(db, asset_id, asset_in, current_user)
 
+
+@router.patch("/{asset_id}/status", response_model=AssetResponse)
+def patch_asset_status(
+    asset_id: uuid.UUID,
+    patch: AssetStatusPatch,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager"])),
+):
+    """Patch an asset's status. Protected transitions (allocated→available) are guarded."""
+    return AssetService.patch_status(db, asset_id, patch, current_user)
