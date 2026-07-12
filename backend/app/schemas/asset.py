@@ -1,9 +1,8 @@
 import uuid
 from datetime import date, datetime
-<<<<<<< HEAD
 from typing import List, Optional
+from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-
 
 # ── Value sets ────────────────────────────────────────────────────────────────
 
@@ -11,7 +10,7 @@ ASSET_STATUSES = {
     "available", "allocated", "reserved",
     "under_maintenance", "lost", "retired", "disposed",
 }
-# Statuses that are managed exclusively by workflow services (Darshil's area).
+# Statuses that are managed exclusively by workflow services
 PROTECTED_STATUSES = {"allocated", "reserved", "under_maintenance"}
 
 ASSET_CONDITIONS = {"excellent", "good", "fair", "poor", "damaged"}
@@ -56,7 +55,7 @@ class AssetBase(BaseModel):
 
 class AssetCreate(AssetBase):
     department_id: Optional[uuid.UUID] = None
-    # tag is auto-generated; do not accept from client
+    status: Optional[str] = "available"
 
 
 class AssetUpdate(BaseModel):
@@ -64,13 +63,13 @@ class AssetUpdate(BaseModel):
     category_id: Optional[uuid.UUID] = None
     serial_number: Optional[str] = Field(None, max_length=120)
     department_id: Optional[uuid.UUID] = None
+    assigned_to_id: Optional[uuid.UUID] = None
     location: Optional[str] = Field(None, min_length=1, max_length=120)
     condition: Optional[str] = Field(None, max_length=20)
     shared: Optional[bool] = None
     acquisition_date: Optional[date] = None
     acquisition_cost: Optional[float] = Field(default=None, ge=0)
     notes: Optional[str] = None
-    # status intentionally excluded from generic update – use PATCH /status
 
     @field_validator("name", "location")
     @classmethod
@@ -111,62 +110,10 @@ class AssetStatusPatch(BaseModel):
 # ── Response ──────────────────────────────────────────────────────────────────
 
 class AssetResponse(BaseModel):
-=======
-from decimal import Decimal
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict, Field
-
-AssetCondition = Literal["excellent", "good", "fair", "poor"]
-AssetStatus = Literal[
-    "available",
-    "allocated",
-    "reserved",
-    "under_maintenance",
-    "lost",
-    "retired",
-    "disposed",
-]
-
-
-class AssetCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=160)
-    category_id: uuid.UUID
-    serial_number: str = Field(min_length=1, max_length=120)
-    department_id: uuid.UUID | None = None
-    location: str = Field(min_length=1, max_length=160)
-    condition: AssetCondition = "good"
-    shared: bool = False
-    acquisition_date: date
-    acquisition_cost: Decimal = Decimal("0")
-    notes: str | None = None
-    status: AssetStatus = "available"
-
-
-class AssetUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=160)
-    category_id: uuid.UUID | None = None
-    serial_number: str | None = Field(default=None, min_length=1, max_length=120)
-    department_id: uuid.UUID | None = None
-    assigned_to_id: uuid.UUID | None = None
-    location: str | None = Field(default=None, min_length=1, max_length=160)
-    condition: AssetCondition | None = None
-    status: AssetStatus | None = None
-    shared: bool | None = None
-    acquisition_date: date | None = None
-    acquisition_cost: Decimal | None = None
-    notes: str | None = None
-
-
-class AssetRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
->>>>>>> 835db53a52e82859b982fe75ce7670b80b1489bd
     id: uuid.UUID
     tag: str
     name: str
     category_id: uuid.UUID
-<<<<<<< HEAD
     serial_number: Optional[str] = None
     location: str
     condition: str
@@ -182,6 +129,9 @@ class AssetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+AssetRead = AssetResponse
+
+
 class AssetListResponse(BaseModel):
     items: List[AssetResponse]
     total: int
@@ -189,7 +139,7 @@ class AssetListResponse(BaseModel):
     limit: int
 
 
-# ── Allocation / Transfer schemas (kept for Darshil's endpoints) ──────────────
+# ── Allocation / Transfer schemas ─────────────────────────────────────────────
 
 class AllocationCreate(BaseModel):
     asset_id: uuid.UUID
@@ -219,6 +169,9 @@ class AllocationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+AllocationRead = AllocationResponse
+
+
 class TransferCreate(BaseModel):
     asset_id: uuid.UUID
     to_employee_id: uuid.UUID
@@ -242,16 +195,6 @@ class TransferResponse(BaseModel):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
-=======
-    serial_number: str
-    department_id: uuid.UUID | None
-    assigned_to_id: uuid.UUID | None
-    location: str
-    condition: AssetCondition
-    status: AssetStatus
-    shared: bool
-    acquisition_date: date
-    acquisition_cost: Decimal
-    notes: str | None
-    updated_at: datetime
->>>>>>> 835db53a52e82859b982fe75ce7670b80b1489bd
+
+
+TransferRead = TransferResponse

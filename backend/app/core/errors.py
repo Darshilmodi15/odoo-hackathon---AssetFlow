@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Centralised HTTP error helpers for AssetFlow.
 
 Every raised HTTPException should go through one of these helpers so that the
@@ -82,13 +81,12 @@ def invalid_asset_condition(value: str) -> None:
         f"'{value}' is not a valid asset condition",
         "INVALID_ASSET_CONDITION",
     )
-=======
-from fastapi import HTTPException, status
 
+
+# ── General API Error Helpers ────────────────────────────────────────────────
 
 def api_error(status_code: int, detail: str, code: str) -> HTTPException:
     return HTTPException(status_code=status_code, detail={"detail": detail, "code": code})
 
 
 FORBIDDEN = api_error(status.HTTP_403_FORBIDDEN, "Not enough permissions", "FORBIDDEN_ROLE")
->>>>>>> 835db53a52e82859b982fe75ce7670b80b1489bd

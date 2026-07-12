@@ -106,7 +106,6 @@ type ApiBooking = {
   status: Booking["status"];
 };
 
-
 function mapDepartment(d: ApiDepartment): Department {
   return {
     id: d.id,
@@ -1032,4 +1031,16 @@ export const reportService = {
     }
     return apiClient.get("/reports/dashboard");
   },
+};
+
+// -------- INQUIRIES --------
+export const inquiryService = {
+  async submit(payload: {
+    name: string;
+    email: string;
+    company?: string;
+    message: string;
+  }) {
+    return apiClient.post("/inquiries", payload);
+  }
 };

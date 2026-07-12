@@ -1,7 +1,7 @@
 """add allocation transfer and booking workflows
 
 Revision ID: 7086c3895342
-Revises: 20260712_0001
+Revises: 20260712_0002
 Create Date: 2026-07-12 13:14:45.091450
 
 """
@@ -10,7 +10,7 @@ from typing import Sequence, Union
 
 # revision identifiers, used by Alembic.
 revision: str = "7086c3895342"
-down_revision: Union[str, None] = "20260712_0001"
+down_revision: Union[str, None] = "20260712_0002"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
