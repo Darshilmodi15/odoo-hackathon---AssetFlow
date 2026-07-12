@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.db.session import get_db, engine
 from app.db.base import Base
 # Import models to ensure they are registered with Base.metadata before create_all
+from fastapi.responses import JSONResponse
+from app.services.booking import BookingOverlapException
 import app.models  # noqa
 from app.api.router import api_router
 
@@ -33,6 +35,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(BookingOverlapException)
+def booking_overlap_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": exc.message,
+            "suggestions": exc.suggestions
+        }
+    )
 
 def check_database(db: Session) -> str:
     db.execute(text("SELECT 1"))

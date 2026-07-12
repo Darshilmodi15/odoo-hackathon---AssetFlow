@@ -22,7 +22,7 @@ if db_url.startswith("postgresql"):
 
 if engine is None:
     connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
-    engine = create_engine(db_url, connect_args=connect_args, pool_pre_ping=True)
+    engine = create_engine(db_url, connect_args=connect_args, pool_pre_ping=True).execution_options(insertmanyvalues=False)
     if db_url.startswith("sqlite"):
         db_type = "sqlite"
 
