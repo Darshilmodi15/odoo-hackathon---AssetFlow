@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     secret_key: str = "temporary_development_secret_key_change_in_production"
     access_token_expire_minutes: int = 11520
     database_url: str = "postgresql://postgres:postgres@localhost:5432/assetflow"
+    migration_database_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
