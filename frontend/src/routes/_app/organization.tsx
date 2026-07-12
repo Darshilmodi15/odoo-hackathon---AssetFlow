@@ -78,7 +78,6 @@ function OrganizationPage() {
   );
 }
 
-
 function DepartmentsTab() {
   const departments = useStore(() => store.departments);
   const employees = useStore(() => store.employees);

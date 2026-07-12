@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { store } from "@/mocks/store";
 import { authService } from "@/services";
 import { USE_MOCKS, setToken } from "@/services/apiClient";
@@ -37,9 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (USE_MOCKS) {
         // Mock: restore user from stored userId
         const storedId = window.localStorage.getItem(STORAGE_KEY);
-        const found = storedId
-          ? store.employees.find((e) => e.id === storedId) ?? null
-          : null;
+        const found = storedId ? (store.employees.find((e) => e.id === storedId) ?? null) : null;
         if (!cancelled) {
           setUser(found);
           setHydrated(true);
@@ -60,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsub = USE_MOCKS
       ? store.subscribe(() => {
           const storedId = window.localStorage.getItem(STORAGE_KEY);
-          setUser(storedId ? store.employees.find((e) => e.id === storedId) ?? null : null);
+          setUser(storedId ? (store.employees.find((e) => e.id === storedId) ?? null) : null);
           force({});
         })
       : () => {};
@@ -69,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       unsub();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<AuthContextValue>(
