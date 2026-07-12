@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { useStore } from "@/hooks/useStore";
 import { store, findBookingConflict } from "@/mocks/store";
 import { bookingService } from "@/services";
@@ -30,6 +30,8 @@ import { EmptyState } from "@/components/common/States";
 import { Plus, AlertTriangle, Calendar as CalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format, addDays, startOfDay } from "date-fns";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+
 
 export const Route = createFileRoute("/_app/bookings")({ component: BookingsPage });
 
@@ -64,6 +66,12 @@ function BookingsPage() {
       ),
     [bookings, resourceId, day, dayEnd],
   );
+
+  const isToday = useMemo(() => {
+    return format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+  }, [day]);
+  const currentHour = new Date().getHours();
+  const currentMin = new Date().getMinutes();
 
   return (
     <div className="space-y-4">
@@ -118,43 +126,72 @@ function BookingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-[60px_1fr] gap-1">
-            {HOURS.map((h) => (
-              <>
-                <div key={`h-${h}`} className="text-xs text-muted-foreground pt-1">
-                  {String(h).padStart(2, "0")}:00
-                </div>
-                <div key={`c-${h}`} className="relative h-10 rounded border border-border bg-card">
-                  {dayBookings.map((b) => {
-                    const bs = new Date(b.startAt),
-                      be = new Date(b.endAt);
-                    const slotStart = new Date(day);
-                    slotStart.setHours(h);
-                    const slotEnd = new Date(day);
-                    slotEnd.setHours(h + 1);
-                    if (bs < slotEnd && be > slotStart) {
-                      const startMin = Math.max(0, (bs.getTime() - slotStart.getTime()) / 60000);
-                      const endMin = Math.min(60, (be.getTime() - slotStart.getTime()) / 60000);
-                      const emp = employees.find((e) => e.id === b.bookedById);
-                      return (
-                        <div
-                          key={b.id}
-                          className="absolute inset-y-1 rounded bg-primary/85 px-2 py-0.5 text-[10px] font-medium text-primary-foreground shadow-sm overflow-hidden"
-                          style={{
-                            left: `${(startMin / 60) * 100}%`,
-                            width: `${((endMin - startMin) / 60) * 100}%`,
-                          }}
-                        >
-                          <div className="truncate">{b.purpose}</div>
-                          <div className="truncate opacity-80">{emp?.name}</div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              </>
-            ))}
+          <div className="grid grid-cols-[60px_1fr] gap-2">
+            <TooltipProvider>
+              {HOURS.map((h) => (
+                <Fragment key={h}>
+                  <div className="text-xs text-muted-foreground pt-2.5 font-mono">
+                    {String(h).padStart(2, "0")}:00
+                  </div>
+                  <div className="relative h-12 rounded-lg border border-border bg-card/65 transition-colors hover:bg-card/90 shadow-sm p-1">
+                    {/* Current Time Indicator Line */}
+                    {isToday && currentHour === h && (
+                      <div
+                        className="absolute left-0 right-0 border-t-2 border-destructive z-10 pointer-events-none"
+                        style={{ top: `${(currentMin / 60) * 100}%` }}
+                      >
+                        <span className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                      </div>
+                    )}
+                    
+                    {dayBookings.map((b) => {
+                      const bs = new Date(b.startAt),
+                        be = new Date(b.endAt);
+                      const slotStart = new Date(day);
+                      slotStart.setHours(h);
+                      const slotEnd = new Date(day);
+                      slotEnd.setHours(h + 1);
+                      if (bs < slotEnd && be > slotStart) {
+                        const startMin = Math.max(0, (bs.getTime() - slotStart.getTime()) / 60000);
+                        const endMin = Math.min(60, (be.getTime() - slotStart.getTime()) / 60000);
+                        const emp = employees.find((e) => e.id === b.bookedById);
+                        const dept = departments.find((d) => d.id === b.departmentId);
+                        return (
+                          <Tooltip key={b.id}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="absolute inset-y-1.5 rounded-md bg-primary/90 px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm overflow-hidden hover:bg-primary hover:scale-[1.01] transition-all cursor-pointer flex flex-col justify-center"
+                                style={{
+                                  left: `${(startMin / 60) * 100}%`,
+                                  width: `${((endMin - startMin) / 60) * 100}%`,
+                                }}
+                              >
+                                <div className="truncate leading-none">{b.purpose}</div>
+                                <div className="truncate opacity-90 text-[9px] mt-0.5 font-normal leading-none">{emp?.name}</div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="bg-popover border border-border p-3 rounded-lg shadow-lg text-popover-foreground">
+                              <div className="space-y-1">
+                                <p className="font-semibold text-sm text-foreground">{b.purpose}</p>
+                                <p className="text-xs"><span className="font-medium text-muted-foreground">Booked By:</span> {emp?.name || "Unknown"}</p>
+                                {dept && <p className="text-xs"><span className="font-medium text-muted-foreground">Department:</span> {dept.name}</p>}
+                                <p className="text-xs font-mono text-primary font-medium">
+                                  {format(bs, "HH:mm")} - {format(be, "HH:mm")}
+                                </p>
+                                {b.notes && (
+                                  <p className="text-[10px] italic border-t border-border mt-1 pt-1 text-muted-foreground max-w-xs">{b.notes}</p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </Fragment>
+              ))}
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>
@@ -207,13 +244,19 @@ function BookingsPage() {
               );
             })}
           {bookings.filter((b) => b.status === "upcoming").length === 0 && (
-            <EmptyState title="No upcoming bookings" />
+            <EmptyState
+              title="No upcoming bookings"
+              description="Book a shared resource by clicking the 'Book Resource' button above."
+              icon={CalIcon}
+            />
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+import { cn } from "@/lib/utils";
 
 function BookingDialog({
   actorId,
@@ -238,7 +281,19 @@ function BookingDialog({
     attendees: 1,
     notes: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState<BookingConflictErr | null>(null);
+
+  const updateField = (key: string, value: any) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    if (errors[key]) {
+      setErrors((errs) => {
+        const copy = { ...errs };
+        delete copy[key];
+        return copy;
+      });
+    }
+  };
 
   const applySuggestion = (s: { assetId: string; startAt: string; endAt: string }) => {
     const st = new Date(s.startAt),
@@ -251,19 +306,52 @@ function BookingDialog({
       end: format(en, "HH:mm"),
     }));
     setConflict(null);
+    setErrors({});
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.assetId) newErrors.assetId = "Please select a resource";
+    if (!form.date) newErrors.date = "Date is required";
+    if (!form.start) newErrors.start = "Start time is required";
+    if (!form.end) newErrors.end = "End time is required";
+    if (!form.purpose || !form.purpose.trim()) {
+      newErrors.purpose = "Purpose is required";
+    } else if (form.purpose.trim().length < 3) {
+      newErrors.purpose = "Purpose must be at least 3 characters";
+    }
+
+    if (form.date && form.start) {
+      const now = new Date();
+      const startAtDate = new Date(`${form.date}T${form.start}:00`);
+      if (isNaN(startAtDate.getTime())) {
+        newErrors.start = "Invalid start time";
+      } else if (startAtDate < now) {
+        newErrors.start = "Start time must be in the future";
+      }
+    }
+
+    if (form.date && form.start && form.end) {
+      const startAtDate = new Date(`${form.date}T${form.start}:00`);
+      const endAtDate = new Date(`${form.date}T${form.end}:00`);
+      if (isNaN(endAtDate.getTime())) {
+        newErrors.end = "Invalid end time";
+      } else if (endAtDate <= startAtDate) {
+        newErrors.end = "End time must be after start time";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const submit = async () => {
-    if (!form.assetId || !form.purpose) {
-      toast.error("Fill required fields");
+    if (!validate()) {
+      toast.error("Please fix the validation errors.");
       return;
     }
     const startAt = new Date(`${form.date}T${form.start}:00`).toISOString();
     const endAt = new Date(`${form.date}T${form.end}:00`).toISOString();
-    if (new Date(endAt) <= new Date(startAt)) {
-      toast.error("End must be after start");
-      return;
-    }
     try {
       await bookingService.create(
         {
@@ -307,12 +395,12 @@ function BookingDialog({
       </DialogHeader>
       <div className="space-y-3">
         <div className="space-y-2">
-          <Label>Resource *</Label>
+          <Label className={cn(errors.assetId && "text-destructive")}>Resource *</Label>
           <Select
             value={form.assetId}
-            onValueChange={(v) => setForm((f) => ({ ...f, assetId: v }))}
+            onValueChange={(v) => updateField("assetId", v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={cn(errors.assetId && "border-destructive focus:ring-destructive")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -323,46 +411,65 @@ function BookingDialog({
               ))}
             </SelectContent>
           </Select>
+          {errors.assetId && (
+            <p className="text-xs font-medium text-destructive">{errors.assetId}</p>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-2">
-            <Label>Date</Label>
+            <Label className={cn(errors.date && "text-destructive")}>Date *</Label>
             <Input
               type="date"
               value={form.date}
-              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+              className={cn(errors.date && "border-destructive focus-visible:ring-destructive")}
+              onChange={(e) => updateField("date", e.target.value)}
             />
+            {errors.date && (
+              <p className="text-xs font-medium text-destructive">{errors.date}</p>
+            )}
           </div>
           <div className="space-y-2">
-            <Label>Start</Label>
+            <Label className={cn(errors.start && "text-destructive")}>Start *</Label>
             <Input
               type="time"
               value={form.start}
-              onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))}
+              className={cn(errors.start && "border-destructive focus-visible:ring-destructive")}
+              onChange={(e) => updateField("start", e.target.value)}
             />
+            {errors.start && (
+              <p className="text-xs font-medium text-destructive">{errors.start}</p>
+            )}
           </div>
           <div className="space-y-2">
-            <Label>End</Label>
+            <Label className={cn(errors.end && "text-destructive")}>End *</Label>
             <Input
               type="time"
               value={form.end}
-              onChange={(e) => setForm((f) => ({ ...f, end: e.target.value }))}
+              className={cn(errors.end && "border-destructive focus-visible:ring-destructive")}
+              onChange={(e) => updateField("end", e.target.value)}
             />
+            {errors.end && (
+              <p className="text-xs font-medium text-destructive">{errors.end}</p>
+            )}
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Purpose *</Label>
+          <Label className={cn(errors.purpose && "text-destructive")}>Purpose *</Label>
           <Input
             value={form.purpose}
-            onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}
+            className={cn(errors.purpose && "border-destructive focus-visible:ring-destructive")}
+            onChange={(e) => updateField("purpose", e.target.value)}
           />
+          {errors.purpose && (
+            <p className="text-xs font-medium text-destructive">{errors.purpose}</p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
             <Label>Department</Label>
             <Select
               value={form.departmentId}
-              onValueChange={(v) => setForm((f) => ({ ...f, departmentId: v }))}
+              onValueChange={(v) => updateField("departmentId", v)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="None" />
@@ -382,7 +489,7 @@ function BookingDialog({
               type="number"
               min={1}
               value={form.attendees}
-              onChange={(e) => setForm((f) => ({ ...f, attendees: Number(e.target.value) }))}
+              onChange={(e) => updateField("attendees", Number(e.target.value))}
             />
           </div>
         </div>
@@ -391,7 +498,7 @@ function BookingDialog({
           <Textarea
             rows={2}
             value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+            onChange={(e) => updateField("notes", e.target.value)}
           />
         </div>
 
@@ -422,8 +529,9 @@ function BookingDialog({
                     return (
                       <button
                         key={i}
+                        type="button"
                         onClick={() => applySuggestion(s)}
-                        className="block w-full rounded border border-border bg-card px-2 py-1.5 text-left text-xs hover:bg-accent"
+                        className="block w-full rounded border border-border bg-card px-2 py-1.5 text-left text-xs hover:bg-accent cursor-pointer"
                       >
                         <span className="font-medium">{asset?.name}</span> ·{" "}
                         {format(new Date(s.startAt), "MMM d HH:mm")} –{" "}
@@ -437,6 +545,16 @@ function BookingDialog({
             )}
           </div>
         )}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={submit}>Confirm Booking</Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
