@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/hooks/useStore";
 import { store } from "@/mocks/store";
-import { auditService } from "@/services";
+import { auditService, refreshRealData } from "@/services";
+import { USE_MOCKS } from "@/services/apiClient";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/States";
-import { Plus, ShieldAlert, ChevronLeft } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { AuditFindingStatus } from "@/types";
@@ -60,6 +61,17 @@ function AuditsPage() {
   const departments = useStore(() => store.departments);
   const [openNew, setOpenNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!USE_MOCKS);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (USE_MOCKS) return;
+    setLoading(true);
+    refreshRealData()
+      .then(() => setError(""))
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load audits"))
+      .finally(() => setLoading(false));
+  }, []);
 
   if (!permitted) return null;
 
@@ -92,7 +104,11 @@ function AuditsPage() {
 
       <Card>
         <CardContent className="p-0">
-          {audits.length === 0 ? (
+          {loading ? (
+            <div className="p-8 text-sm text-muted-foreground">Loading audit cycles...</div>
+          ) : error ? (
+            <div className="p-4 text-sm text-destructive">{error}</div>
+          ) : audits.length === 0 ? (
             <EmptyState title="No audit cycles yet" />
           ) : (
             <div className="overflow-x-auto">
@@ -176,6 +192,7 @@ function CreateAuditDialog({ actorId, onClose }: { actorId: string; onClose: () 
     auditorId: "",
     notes: "",
   });
+  const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!form.title || !form.auditorId) {
@@ -185,20 +202,27 @@ function CreateAuditDialog({ actorId, onClose }: { actorId: string; onClose: () 
     const assetIds = assets
       .filter((a) => !form.scopeDepartmentId || a.departmentId === form.scopeDepartmentId)
       .map((a) => a.id);
-    await auditService.create(
-      {
-        title: form.title,
-        scopeDepartmentId: form.scopeDepartmentId || undefined,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        auditorIds: [form.auditorId],
-        notes: form.notes,
-        assetIds,
-      },
-      actorId,
-    );
-    toast.success("Audit cycle created");
-    onClose();
+    setSaving(true);
+    try {
+      await auditService.create(
+        {
+          title: form.title,
+          scopeDepartmentId: form.scopeDepartmentId || undefined,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          auditorIds: [form.auditorId],
+          notes: form.notes,
+          assetIds,
+        },
+        actorId,
+      );
+      toast.success("Audit cycle created");
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create audit");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -281,7 +305,9 @@ function CreateAuditDialog({ actorId, onClose }: { actorId: string; onClose: () 
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={submit}>Create</Button>
+        <Button onClick={submit} disabled={saving}>
+          {saving ? "Creating..." : "Create"}
+        </Button>
       </DialogFooter>
     </DialogContent>
   );
@@ -301,14 +327,22 @@ function AuditExecution({
   const audit = useStore(() => store.audits.find((a) => a.id === auditId));
   const assets = useStore(() => store.assets);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!audit) return null;
   const locked = audit.status === "closed";
 
   const updateFinding = async (findingId: string, status: AuditFindingStatus, notes?: string) => {
-    await auditService.updateFinding(auditId, findingId, { status, notes }, actorId);
-    if (status !== "verified") toast.warning(`Marked as ${status}`);
-    else toast.success("Verified");
+    setSaving(true);
+    try {
+      await auditService.updateFinding(auditId, findingId, { status, notes }, actorId);
+      if (status !== "verified") toast.warning(`Marked as ${status}`);
+      else toast.success("Verified");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update finding");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const disc = audit.findings.filter((f) => f.status === "missing" || f.status === "damaged");
@@ -347,10 +381,17 @@ function AuditExecution({
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={async () => {
-                    await auditService.close(auditId, actorId);
-                    toast.success("Audit closed");
-                    setConfirmClose(false);
-                    onBack();
+                    setSaving(true);
+                    try {
+                      await auditService.close(auditId, actorId);
+                      toast.success("Audit closed");
+                      setConfirmClose(false);
+                      onBack();
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Could not close audit");
+                    } finally {
+                      setSaving(false);
+                    }
                   }}
                 >
                   Close audit
@@ -421,6 +462,7 @@ function AuditExecution({
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={saving}
                               onClick={() => updateFinding(f.id, "verified")}
                             >
                               Verify
@@ -428,6 +470,7 @@ function AuditExecution({
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={saving}
                               onClick={() => {
                                 const n = window.prompt("Notes (optional)") || undefined;
                                 updateFinding(f.id, "damaged", n);
@@ -438,6 +481,7 @@ function AuditExecution({
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={saving}
                               onClick={() => {
                                 const n = window.prompt("Where should it be?") || undefined;
                                 updateFinding(f.id, "missing", n);

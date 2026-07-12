@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import List
 import uuid
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -21,7 +21,26 @@ def get_notifications(
     """
     return db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.at.desc()).all()
 
-@router.put("/{id}/read")
+@router.patch("/read-all")
+def mark_all_read_patch(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Mark all notifications for the authenticated user as read.
+    """
+    db.query(Notification).filter(Notification.user_id == current_user.id).update({"read": True})
+    db.commit()
+    return {"status": "ok"}
+
+@router.post("/mark-all-read")
+def mark_all_read(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    return mark_all_read_patch(db, current_user)
+
+@router.patch("/{id}/read")
 def mark_read(
     id: uuid.UUID,
     db: Session = Depends(get_db),
@@ -31,19 +50,16 @@ def mark_read(
     Mark a notification as read.
     """
     n = db.query(Notification).filter(Notification.id == id, Notification.user_id == current_user.id).first()
-    if n:
-        n.read = True
-        db.commit()
+    if not n:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    n.read = True
+    db.commit()
     return {"status": "ok"}
 
-@router.post("/mark-all-read")
-def mark_all_read(
+@router.put("/{id}/read")
+def mark_read_put(
+    id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    """
-    Mark all notifications for the user as read.
-    """
-    db.query(Notification).filter(Notification.user_id == current_user.id).update({"read": True})
-    db.commit()
-    return {"status": "ok"}
+    return mark_read(id, db, current_user)

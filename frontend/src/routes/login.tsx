@@ -33,9 +33,9 @@ function LoginPage() {
 
   const { next } = Route.useSearch();
 
-  const [email, setEmail] = useState("anita.rao@assetflow.co");
+  const [email, setEmail] = useState("demo.admin@assetflow.local");
 
-  const [password, setPassword] = useState("demo");
+  const [password, setPassword] = useState("Demo@123");
 
   const [loading, setLoading] = useState(false);
 
@@ -96,7 +96,10 @@ function LoginPage() {
 
                 value={email}
 
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setError("");
+                  setEmail(e.target.value);
+                }}
 
                 required
 
@@ -120,7 +123,10 @@ function LoginPage() {
 
                 value={password}
 
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setError("");
+                  setPassword(e.target.value);
+                }}
 
                 required
 
@@ -141,17 +147,31 @@ function LoginPage() {
             </Button>
 
             <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-xs">
-              <div className="mb-1 font-medium text-foreground">Demo accounts (any password):</div>
+              <div className="mb-2 font-medium text-foreground">Demo Accounts</div>
 
-              <ul className="space-y-0.5 text-muted-foreground">
-                <li>• anita.rao@assetflow.co — Admin</li>
+              <dl className="space-y-2 text-muted-foreground">
+                <div>
+                  <dt className="font-medium text-foreground">Admin</dt>
 
-                <li>• raj.mehta@assetflow.co — Asset Manager</li>
+                  <dd>demo.admin@assetflow.local</dd>
+                </div>
 
-                <li>• sneha.iyer@assetflow.co — Department Head</li>
+                <div>
+                  <dt className="font-medium text-foreground">Asset Manager</dt>
 
-                <li>• priya.shah@assetflow.co — Employee</li>
-              </ul>
+                  <dd>demo.manager@assetflow.local</dd>
+                </div>
+
+                <div>
+                  <dt className="font-medium text-foreground">Employee</dt>
+
+                  <dd>priya.demo@assetflow.local</dd>
+                </div>
+              </dl>
+
+              <div className="mt-3 border-t border-border pt-2 text-muted-foreground">
+                <span className="font-medium text-foreground">Password:</span> Demo@123
+              </div>
             </div>
 
             <p className="text-center text-sm text-muted-foreground">

@@ -18,6 +18,7 @@ class MaintenanceCreate(BaseModel):
     description: str = Field(..., min_length=1)
     priority: str = Field(..., min_length=1, max_length=20)  # "low", "medium", "high", "critical"
     preferred_date: Optional[date] = None
+    attachment_url: Optional[str] = None
 
 class MaintenanceUpdate(BaseModel):
     status: str = Field(..., min_length=1, max_length=20)

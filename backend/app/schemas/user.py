@@ -55,12 +55,12 @@ class UserRead(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     name: str
     email: str
     role: str
     status: str
-    department_id: Optional[str] = Field(None, serialization_alias="departmentId")
+    department_id: Optional[uuid.UUID] = Field(None, serialization_alias="departmentId")
     joined_at: datetime = Field(..., serialization_alias="joinedAt")
 
     model_config = ConfigDict(

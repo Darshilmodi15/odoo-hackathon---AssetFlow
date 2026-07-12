@@ -2,6 +2,8 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { USE_MOCKS } from "@/services/apiClient";
+import { refreshRealData } from "@/services";
 
 export const Route = createFileRoute("/_app")({
   // Server-side / pre-render guard: redirect if no auth token present.
@@ -22,6 +24,12 @@ export const Route = createFileRoute("/_app")({
 
 function AppShell() {
   const { isAuthenticated, hydrated } = useAuth();
+
+  useEffect(() => {
+    if (hydrated && isAuthenticated && !USE_MOCKS) {
+      refreshRealData().catch((error) => console.error("Failed to load live demo data", error));
+    }
+  }, [isAuthenticated, hydrated]);
 
   // Handle token removal after mount (e.g., session expiry, manual logout)
   useEffect(() => {

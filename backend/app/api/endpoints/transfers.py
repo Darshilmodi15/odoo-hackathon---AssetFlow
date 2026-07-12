@@ -37,7 +37,7 @@ def update_transfer_status(
     id: uuid.UUID,
     status_in: TransferStatusUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager", "department_head"]))
 ):
     """
     Approve or reject a transfer request.
@@ -50,6 +50,6 @@ def update_transfer_status_direct(
     id: uuid.UUID,
     status_in: TransferStatusUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager", "department_head"]))
 ):
     return AssetService.update_transfer_status(db, id, status_in, current_user)

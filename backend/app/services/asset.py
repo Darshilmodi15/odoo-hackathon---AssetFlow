@@ -405,6 +405,16 @@ class AssetService:
         if not to_emp:
             raise HTTPException(status_code=404, detail="Target employee not found")
 
+        existing = db.query(TransferRequest).filter(
+            TransferRequest.asset_id == transfer_in.asset_id,
+            TransferRequest.status == "requested",
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail="A pending transfer request already exists for this asset.",
+            )
+
         count = db.query(TransferRequest).count()
         code = f"TR-{str(count + 1).zfill(4)}"
 
@@ -448,8 +458,12 @@ class AssetService:
         if not tr:
             raise HTTPException(status_code=404, detail="Pending transfer request not found")
 
+        requested_status = status_in.status.lower()
+        if requested_status not in {"approved", "rejected"}:
+            raise HTTPException(status_code=400, detail="Transfer status must be approved or rejected")
+
         tr.approver_id = actor.id
-        tr.status = status_in.status.lower()
+        tr.status = requested_status
         asset = db.query(Asset).filter(Asset.id == tr.asset_id).first()
 
         if tr.status == "approved":

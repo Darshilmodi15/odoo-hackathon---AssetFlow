@@ -2,7 +2,7 @@
 // Services can call this OR the mock store, depending on VITE_USE_MOCKS.
 const BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
-export const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? "true") !== "false";
+export const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? "false") === "true";
 
 // ─── Token store ──────────────────────────────────────────────────────────────
 const TOKEN_KEY = "assetflow.token";
@@ -32,10 +32,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
 
   // 401 → clear credentials and redirect to login (outside React tree)
+  // Skip redirect on public pages where 401 is expected (not logged in yet)
+  const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password"];
+  const isPublicPage = PUBLIC_PATHS.some((p) => window.location.pathname.startsWith(p));
   if (res.status === 401) {
     setToken(null);
     window.localStorage.removeItem("assetflow.userId");
-    if (!window.location.pathname.startsWith("/login")) {
+    if (!isPublicPage) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
     }
     throw new Error("Session expired. Please log in again.");

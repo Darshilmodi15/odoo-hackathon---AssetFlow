@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/hooks/useStore";
 import { store } from "@/mocks/store";
-import { notificationService } from "@/services";
+import { notificationService, refreshRealData } from "@/services";
+import { USE_MOCKS } from "@/services/apiClient";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Bell, Check, Search } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import type { NotificationType } from "@/types";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/activity")({ component: ActivityPage });
 
@@ -24,6 +26,17 @@ function ActivityPage() {
   const employees = useStore(() => store.employees);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "unread" | NotificationType>("all");
+  const [loading, setLoading] = useState(!USE_MOCKS);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (USE_MOCKS) return;
+    setLoading(true);
+    refreshRealData()
+      .then(() => setError(""))
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load activity"))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredNotifs = notifs.filter(
     (n) =>
@@ -49,8 +62,16 @@ function ActivityPage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => {
-                  notificationService.markAllRead(user!.id);
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    await notificationService.markAllRead(user!.id);
+                    toast.success("Notifications marked read");
+                  } catch (err) {
+                    toast.error(
+                      err instanceof Error ? err.message : "Could not mark notifications read",
+                    );
+                  }
                 }}
               >
                 <Check className="mr-1 h-4 w-4" />
@@ -94,41 +115,59 @@ function ActivityPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
-            {filteredNotifs.length === 0 && <EmptyState icon={Bell} title="No notifications" />}
-            {filteredNotifs.map((n) => (
-              <div
-                key={n.id}
-                className={`flex items-start gap-3 rounded-md border p-3 text-sm ${n.read ? "border-border bg-card" : "border-primary/30 bg-primary/5"}`}
-              >
-                <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium">{n.title}</div>
-                    <StatusBadge status={n.type} />
+            {loading && (
+              <div className="py-6 text-sm text-muted-foreground">Loading notifications...</div>
+            )}
+            {error && <div className="py-4 text-sm text-destructive">{error}</div>}
+            {!loading && !error && filteredNotifs.length === 0 && (
+              <EmptyState icon={Bell} title="No notifications" />
+            )}
+            {!loading &&
+              !error &&
+              filteredNotifs.map((n) => (
+                <div
+                  key={n.id}
+                  className={`flex items-start gap-3 rounded-md border p-3 text-sm ${n.read ? "border-border bg-card" : "border-primary/30 bg-primary/5"}`}
+                >
+                  <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{n.title}</div>
+                      <StatusBadge status={n.type} />
+                    </div>
+                    <div className="mt-0.5 text-muted-foreground">{n.message}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(n.at), { addSuffix: true })}
+                    </div>
                   </div>
-                  <div className="mt-0.5 text-muted-foreground">{n.message}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(n.at), { addSuffix: true })}
+                  <div className="flex flex-col gap-1">
+                    {n.link && (
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link to={n.link}>Open</Link>
+                      </Button>
+                    )}
+                    {!n.read && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            await notificationService.markRead(n.id);
+                          } catch (err) {
+                            toast.error(
+                              err instanceof Error
+                                ? err.message
+                                : "Could not mark notification read",
+                            );
+                          }
+                        }}
+                      >
+                        Mark read
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  {n.link && (
-                    <Button size="sm" variant="ghost" asChild>
-                      <Link to={n.link}>Open</Link>
-                    </Button>
-                  )}
-                  {!n.read && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => notificationService.markRead(n.id)}
-                    >
-                      Mark read
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
           </CardContent>
         </Card>
       </TabsContent>
@@ -139,29 +178,38 @@ function ActivityPage() {
             <CardTitle className="text-base">Activity Log</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {logs.map((l) => {
-              const u = employees.find((e) => e.id === l.userId);
-              return (
-                <div
-                  key={l.id}
-                  className="flex items-start gap-3 rounded-md border border-border p-3 text-sm"
-                >
-                  <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{u?.name}</span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{l.module}</span>
-                      <StatusBadge status={l.role} className="text-[10px]" />
-                      {l.status && <StatusBadge status={l.status} className="text-[10px]" />}
-                    </div>
-                    <div className="mt-0.5 text-muted-foreground">{l.description}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {format(new Date(l.at), "MMM d, yyyy HH:mm")}
+            {loading && (
+              <div className="py-6 text-sm text-muted-foreground">Loading activity...</div>
+            )}
+            {error && <div className="py-4 text-sm text-destructive">{error}</div>}
+            {!loading &&
+              !error &&
+              logs.map((l) => {
+                const u = employees.find((e) => e.id === l.userId);
+                return (
+                  <div
+                    key={l.id}
+                    className="flex items-start gap-3 rounded-md border border-border p-3 text-sm"
+                  >
+                    <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{u?.name}</span>
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                          {l.module}
+                        </span>
+                        <StatusBadge status={l.role} className="text-[10px]" />
+                        {l.status && <StatusBadge status={l.status} className="text-[10px]" />}
+                      </div>
+                      <div className="mt-0.5 text-muted-foreground">{l.description}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {format(new Date(l.at), "MMM d, yyyy HH:mm")}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            {!loading && !error && logs.length === 0 && <EmptyState title="No activity yet" />}
           </CardContent>
         </Card>
       </TabsContent>

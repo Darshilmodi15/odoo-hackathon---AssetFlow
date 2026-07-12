@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { store } from "@/mocks/store";
+import { USE_MOCKS } from "@/services/apiClient";
 import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types";
@@ -270,23 +271,27 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
               <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
                 Settings
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Demo Role Switcher
-              </DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={user.id} onValueChange={setDemoUser}>
-                {(["admin", "asset_manager", "department_head", "employee"] as Role[]).map(
-                  (role) => {
-                    const sample = employees.find((e) => e.role === role);
-                    if (!sample) return null;
-                    return (
-                      <DropdownMenuRadioItem key={role} value={sample.id}>
-                        {roleLabel(role)} — {sample.name}
-                      </DropdownMenuRadioItem>
-                    );
-                  },
-                )}
-              </DropdownMenuRadioGroup>
+              {USE_MOCKS && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                    Demo Role Switcher
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={user.id} onValueChange={setDemoUser}>
+                    {(["admin", "asset_manager", "department_head", "employee"] as Role[]).map(
+                      (role) => {
+                        const sample = employees.find((e) => e.role === role);
+                        if (!sample) return null;
+                        return (
+                          <DropdownMenuRadioItem key={role} value={sample.id}>
+                            {roleLabel(role)} — {sample.name}
+                          </DropdownMenuRadioItem>
+                        );
+                      },
+                    )}
+                  </DropdownMenuRadioGroup>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {

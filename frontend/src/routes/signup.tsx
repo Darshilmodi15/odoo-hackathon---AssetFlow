@@ -1,9 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { authService } from "@/services";
-import { useStore } from "@/hooks/useStore";
-import { store } from "@/mocks/store";
+import { authService, departmentService } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import type { Department } from "@/types";
 
 export const Route = createFileRoute("/signup")({
   validateSearch: (s: Record<string, unknown>): { next?: string } => ({
@@ -27,10 +26,10 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignupPage() {
-  const { setDemoUser } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const departments = useStore(() => store.departments);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -42,8 +41,17 @@ function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+  useEffect(() => {
+    departmentService
+      .list()
+      .then(setDepartments)
+      .catch(() => {});
+  }, []);
+
+  const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    setError("");
     setForm((s) => ({ ...s, [k]: v }));
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,13 +61,13 @@ function SignupPage() {
     if (!form.agree) return setError("You must accept the terms");
     setLoading(true);
     try {
-      const user = await authService.signup({
+      await authService.signup({
         name: form.name,
         email: form.email,
         password: form.password,
         departmentId: form.departmentId || undefined,
       });
-      setDemoUser(user.id);
+      await login(form.email, form.password);
       toast.success("Account created — welcome!");
 
       if (next) {

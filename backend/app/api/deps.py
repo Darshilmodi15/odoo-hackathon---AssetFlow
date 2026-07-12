@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional
-from fastapi import Depends, HTTPException, Security, Request, status
+from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyCookie
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,6 @@ api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 api_key_cookie = APIKeyCookie(name="access_token", auto_error=False)
 
 def get_current_user(
-    request: Request,
     db: Session = Depends(get_session),
     authorization: Optional[str] = Security(api_key_header),
     access_token: Optional[str] = Security(api_key_cookie)
@@ -26,20 +25,9 @@ def get_current_user(
     # 2. Check Cookie
     if not token and access_token:
         token = access_token
-        
-    # 3. Check dev bypass header
-    if not token:
-        dev_user_id = request.headers.get("x-user-id")
-        if dev_user_id:
-            try:
-                user_uuid = uuid.UUID(dev_user_id)
-                user = db.query(User).filter(User.id == user_uuid).first()
-                if user:
-                    return user
-            except ValueError:
-                pass
 
-    # 4. JWT Token decoding
+    # 3. JWT Token decoding. Do not silently fall back to a user; protected
+    # routes must require a valid active account for the real demo path.
     if token:
         user_id = decode_access_token(token)
         if user_id:
@@ -51,11 +39,6 @@ def get_current_user(
             except ValueError:
                 pass
 
-    # 5. Developer/Testing Fallback (read first user)
-    user = db.query(User).first()
-    if user:
-        return user
-        
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",

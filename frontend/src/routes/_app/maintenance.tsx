@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/hooks/useStore";
 import { store } from "@/mocks/store";
-import { maintenanceService } from "@/services";
+import { maintenanceService, refreshRealData } from "@/services";
+import { USE_MOCKS } from "@/services/apiClient";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,17 @@ function MaintenancePage() {
   const requests = useStore(() => store.maintenance);
   const [openNew, setOpenNew] = useState(false);
   const [detail, setDetail] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!USE_MOCKS);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (USE_MOCKS) return;
+    setLoading(true);
+    refreshRealData()
+      .then(() => setError(""))
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load maintenance"))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -75,87 +87,103 @@ function MaintenancePage() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="kanban">
-        <TabsList>
-          <TabsTrigger value="kanban">Kanban</TabsTrigger>
-          <TabsTrigger value="table">Table</TabsTrigger>
-        </TabsList>
-        <TabsContent value="kanban">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-            {COLUMNS.map((col) => {
-              const items = requests.filter((r) => r.status === col.key);
-              return (
-                <Card key={col.key} className="min-w-0">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      {col.label}
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal">
-                        {items.length}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {items.length === 0 && (
-                      <div className="text-xs text-muted-foreground text-center py-4">Empty</div>
-                    )}
-                    {items.map((r) => (
-                      <KanbanCard key={r.id} r={r} onClick={() => setDetail(r.id)} />
-                    ))}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
-        <TabsContent value="table">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Asset</TableHead>
-                      <TableHead>Issue</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Requested</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {requests.map((r) => {
-                      const asset = store.assets.find((a) => a.id === r.assetId);
-                      return (
-                        <TableRow key={r.id}>
-                          <TableCell className="font-mono text-xs">{r.code}</TableCell>
-                          <TableCell>{asset?.name}</TableCell>
-                          <TableCell>{r.title}</TableCell>
-                          <TableCell>
-                            <StatusBadge status={r.priority} />
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={r.status} />
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {format(new Date(r.requestedAt), "MMM d")}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button size="sm" variant="ghost" onClick={() => setDetail(r.id)}>
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              {requests.length === 0 && <EmptyState title="No maintenance requests" />}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {loading && (
+        <Card>
+          <CardContent className="py-8 text-sm text-muted-foreground">
+            Loading maintenance requests...
+          </CardContent>
+        </Card>
+      )}
+
+      {error && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-4 text-sm text-destructive">{error}</CardContent>
+        </Card>
+      )}
+
+      {!loading && !error && (
+        <Tabs defaultValue="kanban">
+          <TabsList>
+            <TabsTrigger value="kanban">Kanban</TabsTrigger>
+            <TabsTrigger value="table">Table</TabsTrigger>
+          </TabsList>
+          <TabsContent value="kanban">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              {COLUMNS.map((col) => {
+                const items = requests.filter((r) => r.status === col.key);
+                return (
+                  <Card key={col.key} className="min-w-0">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        {col.label}
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal">
+                          {items.length}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
+                      {items.length === 0 && (
+                        <div className="text-xs text-muted-foreground text-center py-4">Empty</div>
+                      )}
+                      {items.map((r) => (
+                        <KanbanCard key={r.id} r={r} onClick={() => setDetail(r.id)} />
+                      ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+          <TabsContent value="table">
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Asset</TableHead>
+                        <TableHead>Issue</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Requested</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {requests.map((r) => {
+                        const asset = store.assets.find((a) => a.id === r.assetId);
+                        return (
+                          <TableRow key={r.id}>
+                            <TableCell className="font-mono text-xs">{r.code}</TableCell>
+                            <TableCell>{asset?.name}</TableCell>
+                            <TableCell>{r.title}</TableCell>
+                            <TableCell>
+                              <StatusBadge status={r.priority} />
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={r.status} />
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {format(new Date(r.requestedAt), "MMM d")}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button size="sm" variant="ghost" onClick={() => setDetail(r.id)}>
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                {requests.length === 0 && <EmptyState title="No maintenance requests" />}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
 
       {detail && (
         <DetailDialog
@@ -191,6 +219,7 @@ function KanbanCard({ r, onClick }: { r: MaintenanceRequest; onClick: () => void
 
 function NewMaintenanceDialog({ actorId, onClose }: { actorId: string; onClose: () => void }) {
   const assets = useStore(() => store.assets);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     assetId: "",
     title: "",
@@ -203,9 +232,16 @@ function NewMaintenanceDialog({ actorId, onClose }: { actorId: string; onClose: 
       toast.error("Fill required fields");
       return;
     }
-    await maintenanceService.create(form, actorId);
-    toast.success("Maintenance request raised");
-    onClose();
+    setSaving(true);
+    try {
+      await maintenanceService.create(form, actorId);
+      toast.success("Maintenance request raised");
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not raise request");
+    } finally {
+      setSaving(false);
+    }
   };
   return (
     <DialogContent>
@@ -279,7 +315,9 @@ function NewMaintenanceDialog({ actorId, onClose }: { actorId: string; onClose: 
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={submit}>Submit</Button>
+        <Button onClick={submit} disabled={saving}>
+          {saving ? "Submitting..." : "Submit"}
+        </Button>
       </DialogFooter>
     </DialogContent>
   );
@@ -301,6 +339,7 @@ function DetailDialog({
   const [notes, setNotes] = useState("");
   const [technician, setTechnician] = useState("");
   const [estCost, setEstCost] = useState<number | "">("");
+  const [saving, setSaving] = useState(false);
 
   if (!req) return null;
   const asset = store.assets.find((a) => a.id === req.assetId);
@@ -308,8 +347,15 @@ function DetailDialog({
   const technicians = employees.filter((e) => e.role === "asset_manager" || e.role === "admin");
 
   const move = async (status: MaintenanceStatus, extra?: Record<string, unknown>) => {
-    await maintenanceService.setStatus(id, status, actorId, extra);
-    toast.success(`Moved to ${status.replace("_", " ")}`);
+    setSaving(true);
+    try {
+      await maintenanceService.setStatus(id, status, actorId, extra);
+      toast.success(`Moved to ${status.replace("_", " ")}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Maintenance update failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -386,12 +432,13 @@ function DetailDialog({
                     rows={2}
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => move("approved")}>
+                    <Button size="sm" disabled={saving} onClick={() => move("approved")}>
                       Approve
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={saving}
                       onClick={() => move("rejected", { note: notes })}
                     >
                       Reject
@@ -423,6 +470,7 @@ function DetailDialog({
                   </div>
                   <Button
                     size="sm"
+                    disabled={saving}
                     onClick={() =>
                       move("assigned", {
                         technicianId: technician,
@@ -435,7 +483,7 @@ function DetailDialog({
                 </>
               )}
               {req.status === "assigned" && (
-                <Button size="sm" onClick={() => move("in_progress")}>
+                <Button size="sm" disabled={saving} onClick={() => move("in_progress")}>
                   Start Work
                 </Button>
               )}
@@ -449,6 +497,7 @@ function DetailDialog({
                   />
                   <Button
                     size="sm"
+                    disabled={saving}
                     onClick={() =>
                       move("resolved", { resolutionNotes: notes, actualCost: estCost || undefined })
                     }
