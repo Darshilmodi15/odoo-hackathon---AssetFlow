@@ -81,11 +81,31 @@ function ReportsPage() {
     [assets, dept, cat],
   );
 
-  const utilizationTrend = Array.from({ length: 12 }, (_, i) => ({
-    month: format(new Date(new Date().getFullYear(), i, 1), "MMM"),
-    utilized: Math.floor(50 + Math.random() * 40),
-    idle: Math.floor(10 + Math.random() * 30),
-  }));
+  const utilizationTrend = Array.from({ length: 12 }, (_, i) => {
+    const monthStart = new Date(new Date().getFullYear(), i, 1);
+    const monthEnd = new Date(new Date().getFullYear(), i + 1, 1);
+    const activeAllocations = allocations.filter(
+      (a) =>
+        new Date(a.allocatedAt) < monthEnd &&
+        (!a.returnedAt || new Date(a.returnedAt) >= monthStart),
+    ).length;
+    const activeBookings = bookings.filter(
+      (b) =>
+        b.status !== "cancelled" &&
+        new Date(b.startAt) < monthEnd &&
+        new Date(b.endAt) >= monthStart,
+    ).length;
+    const denominator = Math.max(
+      filteredAssets.length + filteredAssets.filter((a) => a.shared).length,
+      1,
+    );
+    const utilized = Math.round(((activeAllocations + activeBookings) / denominator) * 100);
+    return {
+      month: format(monthStart, "MMM"),
+      utilized,
+      idle: Math.max(0, 100 - utilized),
+    };
+  });
 
   const mostUsed = allocations.reduce(
     (acc, a) => {

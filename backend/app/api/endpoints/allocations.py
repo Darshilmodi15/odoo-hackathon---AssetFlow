@@ -26,7 +26,7 @@ def get_allocations(
 def create_allocation(
     alloc_in: AllocationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.check_role(["admin", "asset_manager", "department_head"]))
 ):
     """
     Allocate an asset to an employee.

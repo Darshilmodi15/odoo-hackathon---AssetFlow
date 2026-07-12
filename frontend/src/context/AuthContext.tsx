@@ -84,7 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       },
       setDemoUser(id: string) {
-        // Mock-only: switch the active demo persona
+        // Mock-only: switch the active demo persona. Disabled in real API mode.
+        if (!USE_MOCKS) return;
         window.localStorage.setItem(STORAGE_KEY, id);
         const found = store.employees.find((e) => e.id === id) ?? null;
         setUser(found);
@@ -101,10 +102,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+const fallbackAuth: AuthContextValue = {
+  user: null,
+  isAuthenticated: false,
+  hydrated: false,
+  async login() {
+    throw new Error("AuthProvider not mounted");
+  },
+  logout() {},
+  setDemoUser() {},
+  hasRole() {
+    return false;
+  },
+};
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  return ctx ?? fallbackAuth;
 }
 
 export const roleLabel = (r: Role) =>

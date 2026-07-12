@@ -22,9 +22,18 @@ import type {
 // -------- API shape helpers --------
 type ApiUser = Omit<User, "departmentId" | "avatarUrl" | "joinedAt"> & {
   department_id?: string | null;
+  departmentId?: string | null;
   avatar_url?: string | null;
+  avatarUrl?: string | null;
   joined_at?: string;
+  joinedAt?: string;
 };
+
+type ApiListResponse<T> = T[] | { items: T[]; total?: number; skip?: number; limit?: number };
+
+function unwrapList<T>(payload: ApiListResponse<T>): T[] {
+  return Array.isArray(payload) ? payload : payload.items;
+}
 
 type ApiLoginResponse = {
   access_token: string;
@@ -106,6 +115,84 @@ type ApiBooking = {
   status: Booking["status"];
 };
 
+type ApiMaintenanceHistory = {
+  id: string;
+  status: MaintenanceRequest["status"];
+  note?: string | null;
+  by_id?: string | null;
+  changed_at: string;
+};
+
+type ApiMaintenance = {
+  id: string;
+  code: string;
+  asset_id: string;
+  requested_by_id: string;
+  title: string;
+  description: string;
+  priority: MaintenanceRequest["priority"];
+  status: MaintenanceRequest["status"];
+  requested_at: string;
+  preferred_date?: string | null;
+  technician_id?: string | null;
+  estimated_cost?: number | string | null;
+  actual_cost?: number | string | null;
+  resolution_notes?: string | null;
+  history_entries?: ApiMaintenanceHistory[];
+};
+
+type ApiAuditAssignment = {
+  id: string;
+  audit_cycle_id: string;
+  auditor_id: string;
+};
+
+type ApiAuditFinding = {
+  id: string;
+  audit_cycle_id: string;
+  asset_id: string;
+  status: AuditFindingStatus;
+  notes?: string | null;
+  auditor_id?: string | null;
+  verified_at?: string | null;
+};
+
+type ApiAudit = {
+  id: string;
+  title: string;
+  scope_department_id?: string | null;
+  scope_location?: string | null;
+  start_date: string;
+  end_date: string;
+  status: AuditCycle["status"];
+  notes?: string | null;
+  assignments?: ApiAuditAssignment[];
+  findings?: ApiAuditFinding[];
+};
+
+type ApiNotification = {
+  id: string;
+  user_id: string;
+  type: Notification["type"];
+  title: string;
+  message: string;
+  read: boolean;
+  at: string;
+  link?: string | null;
+};
+
+type ApiActivityLog = {
+  id: string;
+  user_id: string;
+  action: string;
+  module: string;
+  entity_id?: string | null;
+  description: string;
+  role: ActivityLog["role"];
+  at: string;
+  status?: string | null;
+};
+
 function mapDepartment(d: ApiDepartment): Department {
   return {
     id: d.id,
@@ -152,10 +239,10 @@ function mapUser(user: ApiUser): User {
     name: user.name,
     email: user.email,
     role: user.role,
-    departmentId: user.department_id ?? undefined,
-    avatarUrl: user.avatar_url ?? undefined,
+    departmentId: user.department_id ?? user.departmentId ?? undefined,
+    avatarUrl: user.avatar_url ?? user.avatarUrl ?? undefined,
     status: user.status,
-    joinedAt: user.joined_at ?? new Date().toISOString(),
+    joinedAt: user.joined_at ?? user.joinedAt ?? new Date().toISOString(),
   };
 }
 
@@ -202,6 +289,80 @@ function mapBooking(b: ApiBooking): Booking {
     attendees: b.attendees ?? undefined,
     notes: b.notes ?? undefined,
     status: b.status,
+  };
+}
+
+function mapMaintenance(m: ApiMaintenance): MaintenanceRequest {
+  return {
+    id: m.id,
+    code: m.code,
+    assetId: m.asset_id,
+    requestedById: m.requested_by_id,
+    title: m.title,
+    description: m.description,
+    priority: m.priority,
+    status: m.status,
+    requestedAt: m.requested_at,
+    preferredDate: m.preferred_date ?? undefined,
+    technicianId: m.technician_id ?? undefined,
+    estimatedCost: m.estimated_cost == null ? undefined : Number(m.estimated_cost),
+    actualCost: m.actual_cost == null ? undefined : Number(m.actual_cost),
+    resolutionNotes: m.resolution_notes ?? undefined,
+    history: (m.history_entries ?? []).map((h) => ({
+      at: h.changed_at,
+      status: h.status,
+      note: h.note ?? undefined,
+      byId: h.by_id ?? undefined,
+    })),
+  };
+}
+
+function mapAudit(a: ApiAudit): AuditCycle {
+  return {
+    id: a.id,
+    title: a.title,
+    scopeDepartmentId: a.scope_department_id ?? undefined,
+    scopeLocation: a.scope_location ?? undefined,
+    startDate: a.start_date,
+    endDate: a.end_date,
+    auditorIds: (a.assignments ?? []).map((x) => x.auditor_id),
+    status: a.status,
+    notes: a.notes ?? undefined,
+    findings: (a.findings ?? []).map((f) => ({
+      id: f.id,
+      assetId: f.asset_id,
+      status: f.status,
+      notes: f.notes ?? undefined,
+      auditorId: f.auditor_id ?? undefined,
+      at: f.verified_at ?? undefined,
+    })),
+  };
+}
+
+function mapNotification(n: ApiNotification): Notification {
+  return {
+    id: n.id,
+    userId: n.user_id,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    read: n.read,
+    at: n.at,
+    link: n.link ?? undefined,
+  };
+}
+
+function mapActivityLog(l: ApiActivityLog): ActivityLog {
+  return {
+    id: l.id,
+    userId: l.user_id,
+    action: l.action,
+    module: l.module,
+    entityId: l.entity_id ?? undefined,
+    description: l.description,
+    role: l.role,
+    at: l.at,
+    status: l.status ?? undefined,
   };
 }
 
@@ -291,11 +452,13 @@ export const departmentService = {
       await mockDelay(50);
       return store.departments;
     }
-    return (await apiClient.get<ApiDepartment[]>("/departments")).map(mapDepartment);
+    return unwrapList(await apiClient.get<ApiListResponse<ApiDepartment>>("/departments")).map(
+      mapDepartment,
+    );
   },
   async create(d: Omit<Department, "id">): Promise<Department> {
     if (!USE_MOCKS) {
-      return mapDepartment(
+      const created = mapDepartment(
         await apiClient.post<ApiDepartment>("/departments", {
           name: d.name,
           code: d.code,
@@ -304,6 +467,8 @@ export const departmentService = {
           status: d.status,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return created;
     }
     const dep = { ...d, id: store.nextId("d") };
     store.departments.push(dep);
@@ -312,8 +477,8 @@ export const departmentService = {
   },
   async update(id: string, patch: Partial<Department>) {
     if (!USE_MOCKS) {
-      return mapDepartment(
-        await apiClient.patch<ApiDepartment>(`/departments/${id}`, {
+      const updated = mapDepartment(
+        await apiClient.put<ApiDepartment>(`/departments/${id}`, {
           name: patch.name,
           code: patch.code,
           head_id: patch.headId,
@@ -321,6 +486,8 @@ export const departmentService = {
           status: patch.status,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return updated;
     }
     const i = store.departments.findIndex((d) => d.id === id);
     if (i >= 0) store.departments[i] = { ...store.departments[i], ...patch };
@@ -336,17 +503,21 @@ export const categoryService = {
       await mockDelay(50);
       return store.categories;
     }
-    return (await apiClient.get<ApiCategory[]>("/categories")).map(mapCategory);
+    return unwrapList(await apiClient.get<ApiListResponse<ApiCategory>>("/categories")).map(
+      mapCategory,
+    );
   },
   async create(c: Omit<AssetCategory, "id">) {
     if (!USE_MOCKS) {
-      return mapCategory(
+      const created = mapCategory(
         await apiClient.post<ApiCategory>("/categories", {
           name: c.name,
           description: c.description,
           status: c.status,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return created;
     }
     const cat = { ...c, id: store.nextId("c") };
     store.categories.push(cat);
@@ -355,13 +526,15 @@ export const categoryService = {
   },
   async update(id: string, patch: Partial<AssetCategory>) {
     if (!USE_MOCKS) {
-      return mapCategory(
-        await apiClient.patch<ApiCategory>(`/categories/${id}`, {
+      const updated = mapCategory(
+        await apiClient.put<ApiCategory>(`/categories/${id}`, {
           name: patch.name,
           description: patch.description,
           status: patch.status,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return updated;
     }
     const i = store.categories.findIndex((c) => c.id === id);
     if (i >= 0) store.categories[i] = { ...store.categories[i], ...patch };
@@ -377,10 +550,14 @@ export const employeeService = {
       await mockDelay(50);
       return store.employees;
     }
-    return (await apiClient.get<ApiUser[]>("/users")).map(mapUser);
+    return (await apiClient.get<ApiUser[]>("/employees")).map(mapUser);
   },
   async updateRole(id: string, role: Role, actorId: string) {
-    if (!USE_MOCKS) return mapUser(await apiClient.patch<ApiUser>(`/users/${id}/role`, { role }));
+    if (!USE_MOCKS) {
+      const updated = mapUser(await apiClient.put<ApiUser>(`/employees/${id}/role`, { role }));
+      void refreshRealData().catch(() => undefined);
+      return updated;
+    }
     const emp = store.employees.find((e) => e.id === id);
     if (!emp) throw new Error("Not found");
     const prev = emp.role;
@@ -399,7 +576,9 @@ export const employeeService = {
   },
   async setStatus(id: string, status: "active" | "inactive") {
     if (!USE_MOCKS) {
-      return mapUser(await apiClient.patch<ApiUser>(`/users/${id}/status`, { status }));
+      const updated = mapUser(await apiClient.put<ApiUser>(`/employees/${id}/status`, { status }));
+      void refreshRealData().catch(() => undefined);
+      return updated;
     }
     const emp = store.employees.find((e) => e.id === id);
     if (!emp) throw new Error("Not found");
@@ -416,7 +595,9 @@ export const assetService = {
       await mockDelay(50);
       return store.assets;
     }
-    return (await apiClient.get<ApiAsset[]>("/assets")).map(mapAsset);
+    return unwrapList(await apiClient.get<ApiListResponse<ApiAsset>>("/assets?limit=200")).map(
+      mapAsset,
+    );
   },
   async get(id: string): Promise<Asset | undefined> {
     if (USE_MOCKS) return store.assets.find((a) => a.id === id);
@@ -427,7 +608,7 @@ export const assetService = {
     actorId: string,
   ) {
     if (!USE_MOCKS) {
-      return mapAsset(
+      const created = mapAsset(
         await apiClient.post<ApiAsset>("/assets", {
           name: input.name,
           category_id: input.categoryId,
@@ -442,6 +623,8 @@ export const assetService = {
           status: input.status,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return created;
     }
     const asset: Asset = {
       ...input,
@@ -465,8 +648,8 @@ export const assetService = {
   },
   async update(id: string, patch: Partial<Asset>) {
     if (!USE_MOCKS) {
-      return mapAsset(
-        await apiClient.patch<ApiAsset>(`/assets/${id}`, {
+      const updated = mapAsset(
+        await apiClient.put<ApiAsset>(`/assets/${id}`, {
           name: patch.name,
           category_id: patch.categoryId,
           serial_number: patch.serialNumber,
@@ -481,6 +664,8 @@ export const assetService = {
           notes: patch.notes,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return updated;
     }
     const i = store.assets.findIndex((a) => a.id === id);
     if (i < 0) throw new Error("Not found");
@@ -507,7 +692,7 @@ export const allocationService = {
     actorId: string,
   ) {
     if (!USE_MOCKS) {
-      return mapAllocation(
+      const created = mapAllocation(
         await apiClient.post<ApiAllocation>("/allocations", {
           asset_id: input.assetId,
           employee_id: input.employeeId,
@@ -516,6 +701,8 @@ export const allocationService = {
           notes: input.notes,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return created;
     }
     const asset = store.assets.find((a) => a.id === input.assetId);
     if (!asset) throw new Error("Asset not found");
@@ -570,12 +757,14 @@ export const allocationService = {
     actorId: string,
   ) {
     if (!USE_MOCKS) {
-      return mapAllocation(
+      const returned = mapAllocation(
         await apiClient.post<ApiAllocation>(`/allocations/${id}/return`, {
-          condition_at_return: input.returnCondition,
-          condition_notes: input.returnNotes,
+          return_condition: input.returnCondition,
+          return_notes: input.returnNotes,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return returned;
     }
     const a = store.allocations.find((x) => x.id === id);
     if (!a) throw new Error("Not found");
@@ -614,13 +803,15 @@ export const transferService = {
     requestedById: string,
   ) {
     if (!USE_MOCKS) {
-      return mapTransfer(
+      const created = mapTransfer(
         await apiClient.post<ApiTransfer>("/transfers", {
           asset_id: input.assetId,
           to_employee_id: input.toEmployeeId,
           reason: input.reason,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return created;
     }
     const asset = store.assets.find((a) => a.id === input.assetId);
     if (!asset) throw new Error("Asset not found");
@@ -651,8 +842,13 @@ export const transferService = {
     return req;
   },
   async setStatus(id: string, status: TransferRequest["status"], approverId: string) {
-    if (!USE_MOCKS)
-      return mapTransfer(await apiClient.patch<ApiTransfer>(`/transfers/${id}/status`, { status }));
+    if (!USE_MOCKS) {
+      const updated = mapTransfer(
+        await apiClient.put<ApiTransfer>(`/transfers/${id}/status`, { status }),
+      );
+      void refreshRealData().catch(() => undefined);
+      return updated;
+    }
     const t = store.transfers.find((x) => x.id === id);
     if (!t) throw new Error("Not found");
     t.status = status;
@@ -700,7 +896,7 @@ export const bookingService = {
   },
   async create(input: Omit<Booking, "id" | "status">, actorId: string) {
     if (!USE_MOCKS) {
-      return mapBooking(
+      const created = mapBooking(
         await apiClient.post<ApiBooking>("/bookings", {
           asset_id: input.assetId,
           department_id: input.departmentId,
@@ -711,6 +907,8 @@ export const bookingService = {
           notes: input.notes,
         }),
       );
+      void refreshRealData().catch(() => undefined);
+      return created;
     }
     const conflict = findBookingConflict(input.assetId, input.startAt, input.endAt);
     if (conflict) {
@@ -747,7 +945,11 @@ export const bookingService = {
     return b;
   },
   async cancel(id: string, actorId: string) {
-    if (!USE_MOCKS) return mapBooking(await apiClient.del<ApiBooking>(`/bookings/${id}`));
+    if (!USE_MOCKS) {
+      const cancelled = mapBooking(await apiClient.del<ApiBooking>(`/bookings/${id}`));
+      void refreshRealData().catch(() => undefined);
+      return cancelled;
+    }
     const b = store.bookings.find((x) => x.id === id);
     if (!b) throw new Error("Not found");
     b.status = "cancelled";
@@ -806,7 +1008,7 @@ export const bookingService = {
 export const maintenanceService = {
   async list(): Promise<MaintenanceRequest[]> {
     if (USE_MOCKS) return store.maintenance;
-    return apiClient.get("/maintenance");
+    return (await apiClient.get<ApiMaintenance[]>("/maintenance")).map(mapMaintenance);
   },
   async create(
     input: {
@@ -818,6 +1020,19 @@ export const maintenanceService = {
     },
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      const created = mapMaintenance(
+        await apiClient.post<ApiMaintenance>("/maintenance", {
+          asset_id: input.assetId,
+          title: input.title,
+          description: input.description,
+          priority: input.priority,
+          preferred_date: input.preferredDate || undefined,
+        }),
+      );
+      void refreshRealData().catch(() => undefined);
+      return created;
+    }
     const code = `MR-${String(store.maintenance.length + 38).padStart(4, "0")}`;
     const req: MaintenanceRequest = {
       id: store.nextId("m"),
@@ -858,6 +1073,20 @@ export const maintenanceService = {
       resolutionNotes?: string;
     },
   ) {
+    if (!USE_MOCKS) {
+      const updated = mapMaintenance(
+        await apiClient.patch<ApiMaintenance>(`/maintenance/${id}/status`, {
+          status,
+          technician_id: extra?.technicianId,
+          estimated_cost: extra?.estimatedCost,
+          actual_cost: extra?.actualCost,
+          resolution_notes: extra?.resolutionNotes,
+          note: extra?.note,
+        }),
+      );
+      void refreshRealData().catch(() => undefined);
+      return updated;
+    }
     const req = store.maintenance.find((x) => x.id === id);
     if (!req) throw new Error("Not found");
     const prev = req.status;
@@ -909,12 +1138,27 @@ export const maintenanceService = {
 export const auditService = {
   async list(): Promise<AuditCycle[]> {
     if (USE_MOCKS) return store.audits;
-    return apiClient.get("/audits");
+    return (await apiClient.get<ApiAudit[]>("/audits")).map(mapAudit);
   },
   async create(
     input: Omit<AuditCycle, "id" | "findings" | "status"> & { assetIds: string[] },
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      const created = mapAudit(
+        await apiClient.post<ApiAudit>("/audits", {
+          title: input.title,
+          scope_department_id: input.scopeDepartmentId,
+          scope_location: input.scopeLocation,
+          start_date: input.startDate,
+          end_date: input.endDate,
+          auditor_ids: input.auditorIds,
+          asset_ids: input.assetIds,
+        }),
+      );
+      void refreshRealData().catch(() => undefined);
+      return created;
+    }
     const cycle: AuditCycle = {
       id: store.nextId("au"),
       title: input.title,
@@ -950,6 +1194,21 @@ export const auditService = {
     patch: Partial<{ status: AuditFindingStatus; notes: string }>,
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      const updated = await apiClient.put<ApiAuditFinding>(
+        `/audits/${auditId}/findings/${findingId}`,
+        patch,
+      );
+      void refreshRealData().catch(() => undefined);
+      return {
+        id: updated.id,
+        assetId: updated.asset_id,
+        status: updated.status,
+        notes: updated.notes ?? undefined,
+        auditorId: updated.auditor_id ?? undefined,
+        at: updated.verified_at ?? undefined,
+      };
+    }
     const a = store.audits.find((x) => x.id === auditId);
     if (!a) throw new Error("Not found");
     const f = a.findings.find((x) => x.id === findingId);
@@ -968,6 +1227,11 @@ export const auditService = {
     return f;
   },
   async close(id: string, actorId: string) {
+    if (!USE_MOCKS) {
+      const closed = mapAudit(await apiClient.post<ApiAudit>(`/audits/${id}/close`));
+      void refreshRealData().catch(() => undefined);
+      return closed;
+    }
     const a = store.audits.find((x) => x.id === id);
     if (!a) throw new Error("Not found");
     a.status = "closed";
@@ -996,14 +1260,24 @@ export const notificationService = {
   async list(userId?: string): Promise<Notification[]> {
     if (USE_MOCKS)
       return userId ? store.notifications.filter((n) => n.userId === userId) : store.notifications;
-    return apiClient.get("/notifications");
+    return (await apiClient.get<ApiNotification[]>("/notifications")).map(mapNotification);
   },
   async markRead(id: string) {
+    if (!USE_MOCKS) {
+      await apiClient.patch(`/notifications/${id}/read`);
+      void refreshRealData().catch(() => undefined);
+      return;
+    }
     const n = store.notifications.find((x) => x.id === id);
     if (n) n.read = true;
     store.emit();
   },
   async markAllRead(userId: string) {
+    if (!USE_MOCKS) {
+      await apiClient.patch("/notifications/read-all");
+      void refreshRealData().catch(() => undefined);
+      return;
+    }
     store.notifications.forEach((n) => {
       if (n.userId === userId) n.read = true;
     });
@@ -1015,7 +1289,7 @@ export const notificationService = {
 export const activityService = {
   async list(): Promise<ActivityLog[]> {
     if (USE_MOCKS) return store.activityLogs;
-    return apiClient.get("/activity-logs");
+    return (await apiClient.get<ApiActivityLog[]>("/activity-logs")).map(mapActivityLog);
   },
 };
 
@@ -1032,6 +1306,48 @@ export const reportService = {
     return apiClient.get("/reports/dashboard");
   },
 };
+
+export async function refreshRealData() {
+  if (USE_MOCKS) return;
+  const [
+    departments,
+    categories,
+    employees,
+    assets,
+    allocations,
+    transfers,
+    bookings,
+    maintenance,
+    audits,
+    notifications,
+    activityLogs,
+  ] = await Promise.all([
+    departmentService.list(),
+    categoryService.list(),
+    employeeService.list(),
+    assetService.list(),
+    allocationService.list(),
+    transferService.list(),
+    bookingService.list(),
+    maintenanceService.list(),
+    auditService.list(),
+    notificationService.list(),
+    activityService.list(),
+  ]);
+
+  store.departments = departments;
+  store.categories = categories;
+  store.employees = employees;
+  store.assets = assets;
+  store.allocations = allocations;
+  store.transfers = transfers;
+  store.bookings = bookings;
+  store.maintenance = maintenance;
+  store.audits = audits;
+  store.notifications = notifications;
+  store.activityLogs = activityLogs;
+  store.emit();
+}
 
 // -------- INQUIRIES --------
 export const inquiryService = {

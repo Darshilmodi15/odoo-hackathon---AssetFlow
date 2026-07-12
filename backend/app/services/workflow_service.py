@@ -11,6 +11,8 @@ from app.models.organization import Department
 from app.models.user import User
 from app.models.workflow import Allocation, Booking, TransferRequest
 from app.schemas.workflow import AllocationCreate, AllocationReturn, BookingCreate, BookingUpdate, TransferCreate
+from app.services.log import LogService
+from app.services.notification import NotificationService
 
 ALLOCATABLE_ASSET_STATUS = "available"
 BLOCKING_BOOKING_STATUSES = {"upcoming", "ongoing"}
@@ -91,6 +93,25 @@ def create_allocation(db: Session, payload: AllocationCreate, actor: User) -> Al
     db.add(allocation)
     db.commit()
     db.refresh(allocation)
+    LogService.create(
+        db=db,
+        user_id=actor.id,
+        action="create_allocation",
+        module="Allocations",
+        description=f"Allocated asset {asset.tag}",
+        role=actor.role,
+        entity_id=allocation.id,
+        status="active",
+    )
+    if allocation.employee_id:
+        NotificationService.create(
+            db=db,
+            user_id=allocation.employee_id,
+            notification_type="allocation",
+            title="Asset allocated",
+            message=f"{asset.name} has been allocated to you.",
+            link=f"/allocations",
+        )
     return allocation
 
 
@@ -116,6 +137,16 @@ def return_allocation(db: Session, allocation_id: uuid.UUID, payload: Allocation
         asset.assigned_to_id = None
     db.commit()
     db.refresh(allocation)
+    LogService.create(
+        db=db,
+        user_id=actor.id,
+        action="return_allocation",
+        module="Allocations",
+        description=f"Returned asset {asset.tag if asset else allocation.asset_id}",
+        role=actor.role,
+        entity_id=allocation.id,
+        status="returned",
+    )
     return allocation
 
 
@@ -166,6 +197,25 @@ def create_transfer(db: Session, payload: TransferCreate, actor: User) -> Transf
     db.add(transfer)
     db.commit()
     db.refresh(transfer)
+    LogService.create(
+        db=db,
+        user_id=actor.id,
+        action="create_transfer",
+        module="Transfers",
+        description=f"Requested transfer {transfer.code}",
+        role=actor.role,
+        entity_id=transfer.id,
+        status="requested",
+    )
+    for manager in db.query(User).filter(User.role.in_(["admin", "asset_manager"]), User.status == "active").all():
+        NotificationService.create(
+            db=db,
+            user_id=manager.id,
+            notification_type="transfer",
+            title="Transfer requested",
+            message=f"Transfer {transfer.code} is awaiting review.",
+            link="/transfers",
+        )
     return transfer
 
 
@@ -195,6 +245,26 @@ def update_transfer_status(db: Session, transfer_id: uuid.UUID, new_status: str,
         transfer.status = "completed"
     db.commit()
     db.refresh(transfer)
+    LogService.create(
+        db=db,
+        user_id=actor.id,
+        action=f"{new_status}_transfer",
+        module="Transfers",
+        description=f"Transfer {transfer.code} was {new_status}",
+        role=actor.role,
+        entity_id=transfer.id,
+        status=transfer.status,
+    )
+    for user_id in {transfer.requested_by_id, transfer.from_employee_id, transfer.to_employee_id}:
+        if user_id:
+            NotificationService.create(
+                db=db,
+                user_id=user_id,
+                notification_type="transfer",
+                title=f"Transfer {new_status}",
+                message=f"Transfer {transfer.code} was {new_status}.",
+                link="/transfers",
+            )
     return transfer
 
 
@@ -252,6 +322,24 @@ def create_booking(db: Session, payload: BookingCreate, actor: User) -> Booking:
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    LogService.create(
+        db=db,
+        user_id=actor.id,
+        action="create_booking",
+        module="Bookings",
+        description=f"Booked shared resource {asset.tag}",
+        role=actor.role,
+        entity_id=booking.id,
+        status="upcoming",
+    )
+    NotificationService.create(
+        db=db,
+        user_id=actor.id,
+        notification_type="booking",
+        title="Booking confirmed",
+        message=f"Booking for {asset.name} is confirmed.",
+        link="/bookings",
+    )
     return booking
 
 
@@ -291,4 +379,22 @@ def cancel_booking(db: Session, booking_id: uuid.UUID, actor: User) -> Booking:
     booking.status = "cancelled"
     db.commit()
     db.refresh(booking)
+    LogService.create(
+        db=db,
+        user_id=actor.id,
+        action="cancel_booking",
+        module="Bookings",
+        description=f"Cancelled booking {booking.id}",
+        role=actor.role,
+        entity_id=booking.id,
+        status="cancelled",
+    )
+    NotificationService.create(
+        db=db,
+        user_id=booking.booked_by_id,
+        notification_type="booking",
+        title="Booking cancelled",
+        message="A resource booking was cancelled.",
+        link="/bookings",
+    )
     return booking

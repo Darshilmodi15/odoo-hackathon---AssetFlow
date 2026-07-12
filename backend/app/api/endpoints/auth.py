@@ -1,5 +1,5 @@
 import uuid
-from typing import Any
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
@@ -7,10 +7,23 @@ from app.api import deps
 from app.core import security
 from app.models.user import User
 from app.schemas.user import UserSignup, UserLogin, UserResponse
+from app.schemas.auth import TokenResponse
 
 router = APIRouter()
 
-@router.post("/signup", response_model=UserResponse)
+def resolve_uuid(val: Optional[str]) -> Optional[uuid.UUID]:
+    if not val:
+        return None
+    val = val.strip()
+    if not val or val == "null" or val == "undefined":
+        return None
+    try:
+        return uuid.UUID(val)
+    except ValueError:
+        # Invalid UUID string — skip instead of generating a fake one
+        return None
+
+@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def signup(
     user_in: UserSignup,
     db: Session = Depends(deps.get_db)
@@ -21,26 +34,33 @@ def signup(
     user = db.query(User).filter(User.email == user_in.email.lower()).first()
     if user:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail="The user with this email already exists in the system.",
         )
     
-    new_user_id = "e_" + uuid.uuid4().hex[:8]
+    dept_id = resolve_uuid(user_in.department_id)
     new_user = User(
-        id=new_user_id,
+        id=uuid.uuid4(),
         name=user_in.name,
         email=user_in.email.lower(),
         hashed_password=security.get_password_hash(user_in.password),
         role="employee",
-        department_id=user_in.department_id,
+        department_id=dept_id,
         status="active"
     )
     db.add(new_user)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Could not create account. Please check the selected department.",
+        )
     db.refresh(new_user)
     return new_user
 
-@router.post("/login", response_model=UserResponse)
+@router.post("/login", response_model=TokenResponse)
 def login(
     response: Response,
     credentials: UserLogin,
@@ -74,11 +94,11 @@ def login(
         secure=False
     )
     
-    # Set headers
+    # Set headers for compatibility and return the contract expected by clients.
     response.headers["Authorization"] = f"Bearer {token}"
     response.headers["X-Access-Token"] = token
-    
-    return user
+
+    return {"access_token": token, "token_type": "bearer", "user": user}
 
 @router.get("/me", response_model=UserResponse)
 def get_me(

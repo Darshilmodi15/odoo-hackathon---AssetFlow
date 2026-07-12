@@ -113,7 +113,11 @@ function DashboardPage() {
   const kpis = {
     available: scoped.assets.filter((a) => a.status === "available").length,
     allocated: scoped.assets.filter((a) => a.status === "allocated").length,
-    maintenance: scoped.assets.filter((a) => a.status === "under_maintenance").length,
+    maintenanceToday: scoped.maintenance.filter((m) => {
+      const requested = new Date(m.requestedAt);
+      const today = new Date();
+      return requested.toDateString() === today.toDateString();
+    }).length,
     activeBookings: scoped.bookings.filter((b) => b.status === "upcoming" || b.status === "ongoing")
       .length,
     pendingTransfers: scoped.transfers.filter((t) => t.status === "requested").length,
@@ -126,7 +130,7 @@ function DashboardPage() {
     ).length,
   };
 
-  const overdue = allocations.filter(
+  const overdue = scoped.allocations.filter(
     (a) =>
       a.status === "overdue" ||
       (a.status === "active" && a.expectedReturnAt && new Date(a.expectedReturnAt) < new Date()),
@@ -147,10 +151,25 @@ function DashboardPage() {
     count: assets.filter((a) => a.departmentId === d.id).length,
   }));
 
-  const utilization = Array.from({ length: 7 }, (_, i) => ({
-    day: format(new Date(Date.now() - (6 - i) * 86400000), "EEE"),
-    utilized: Math.floor(60 + Math.random() * 25),
-  }));
+  const utilization = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(Date.now() - (6 - i) * 86400000);
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+    const activeAllocations = allocations.filter(
+      (a) =>
+        new Date(a.allocatedAt) < dayEnd && (!a.returnedAt || new Date(a.returnedAt) >= dayStart),
+    ).length;
+    const activeBookings = bookings.filter(
+      (b) =>
+        b.status !== "cancelled" && new Date(b.startAt) < dayEnd && new Date(b.endAt) >= dayStart,
+    ).length;
+    const denominator = Math.max(assets.length + assets.filter((a) => a.shared).length, 1);
+    return {
+      day: format(date, "EEE"),
+      utilized: Math.round(((activeAllocations + activeBookings) / denominator) * 100),
+    };
+  });
 
   const COLORS = [
     "oklch(0.55 0.2 275)",
@@ -190,7 +209,7 @@ function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <KPI
           label="Assets Available"
           value={kpis.available}
@@ -206,8 +225,8 @@ function DashboardPage() {
           to="/allocations"
         />
         <KPI
-          label="Under Maintenance"
-          value={kpis.maintenance}
+          label="Maintenance Today"
+          value={kpis.maintenanceToday}
           icon={Wrench}
           tone="warning"
           to="/maintenance"
@@ -231,6 +250,13 @@ function DashboardPage() {
           value={kpis.upcomingReturns}
           icon={Clock}
           tone="info"
+          to="/allocations"
+        />
+        <KPI
+          label="Overdue Returns"
+          value={overdue.length}
+          icon={AlertTriangle}
+          tone="destructive"
           to="/allocations"
         />
       </div>

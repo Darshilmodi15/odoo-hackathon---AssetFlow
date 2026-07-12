@@ -21,6 +21,14 @@ def get_maintenance_requests(
     """
     return MaintenanceService.get_all(db)
 
+@router.get("/{id}", response_model=MaintenanceResponse)
+def get_maintenance_request(
+    id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    return MaintenanceService.get_by_id(db, id)
+
 @router.post("", response_model=MaintenanceResponse, status_code=status.HTTP_201_CREATED)
 def create_maintenance_request(
     maint_in: MaintenanceCreate,
@@ -32,7 +40,7 @@ def create_maintenance_request(
     """
     return MaintenanceService.create(db, maint_in, current_user)
 
-@router.put("/{id}/status", response_model=MaintenanceResponse)
+@router.patch("/{id}/status", response_model=MaintenanceResponse)
 def update_maintenance_status(
     id: uuid.UUID,
     update_in: MaintenanceUpdate,
@@ -42,6 +50,15 @@ def update_maintenance_status(
     """
     Update status/assignment/costs for a maintenance request.
     """
+    return MaintenanceService.update_status(db, id, update_in, current_user)
+
+@router.put("/{id}/status", response_model=MaintenanceResponse)
+def update_maintenance_status_put(
+    id: uuid.UUID,
+    update_in: MaintenanceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
     return MaintenanceService.update_status(db, id, update_in, current_user)
 
 @router.put("/{id}", response_model=MaintenanceResponse)

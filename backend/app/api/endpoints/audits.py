@@ -6,7 +6,15 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
-from app.schemas.audit import AuditCreate, FindingUpdate, FindingResponse, AuditResponse
+from app.schemas.audit import (
+    AssignmentCreate,
+    AssignmentResponse,
+    AuditCreate,
+    FindingCreate,
+    FindingUpdate,
+    FindingResponse,
+    AuditResponse,
+)
 from app.services.audit import AuditService
 
 router = APIRouter()
@@ -21,6 +29,14 @@ def get_audit_cycles(
     """
     return AuditService.get_all(db)
 
+@router.get("/{id}", response_model=AuditResponse)
+def get_audit_cycle(
+    id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    return AuditService.get_by_id(db, id)
+
 @router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
 def create_audit_cycle(
     audit_in: AuditCreate,
@@ -31,6 +47,24 @@ def create_audit_cycle(
     Create a new audit cycle with auditor assignments and asset findings.
     """
     return AuditService.create(db, audit_in, current_user)
+
+@router.post("/{id}/assignments", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)
+def add_audit_assignment(
+    id: uuid.UUID,
+    assignment_in: AssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    return AuditService.add_assignment(db, id, assignment_in, current_user)
+
+@router.post("/{id}/findings", response_model=FindingResponse, status_code=status.HTTP_201_CREATED)
+def add_audit_finding(
+    id: uuid.UUID,
+    finding_in: FindingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    return AuditService.add_finding(db, id, finding_in, current_user)
 
 @router.put("/{cycle_id}/findings/{finding_id}", response_model=FindingResponse)
 def update_audit_finding(

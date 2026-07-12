@@ -22,10 +22,14 @@ class BookingService:
 
     @staticmethod
     def create(db: Session, booking_in: BookingCreate, actor: User):
-        # 1. Check if asset exists
+        # 1. Check if asset exists and is bookable
         asset = db.query(Asset).filter(Asset.id == booking_in.asset_id).first()
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
+        if not asset.shared:
+            raise HTTPException(status_code=400, detail="Asset is not marked as a shared/bookable resource")
+        if booking_in.end_at <= booking_in.start_at:
+            raise HTTPException(status_code=400, detail="Booking end time must be later than start time")
 
         # 2. Check overlap
         # overlap if start_at < booking.end_at and end_at > booking.start_at

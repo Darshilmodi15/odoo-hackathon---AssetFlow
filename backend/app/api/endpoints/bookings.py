@@ -1,13 +1,13 @@
 from typing import List
 import uuid
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
 from app.schemas.booking import BookingCreate, BookingResponse
-from app.services.booking import BookingService
+from app.services.booking import BookingService, BookingOverlapException
 
 router = APIRouter()
 
@@ -30,7 +30,24 @@ def create_booking(
     """
     Create a new booking with overlap checks.
     """
-    return BookingService.create(db, booking_in, current_user)
+    try:
+        return BookingService.create(db, booking_in, current_user)
+    except BookingOverlapException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": exc.message, "suggestions": exc.suggestions},
+        ) from exc
+
+@router.delete("/{id}", response_model=BookingResponse)
+def cancel_booking_delete(
+    id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Cancel an active booking via DELETE for frontend compatibility.
+    """
+    return BookingService.cancel(db, id, current_user)
 
 @router.put("/{id}/cancel", response_model=BookingResponse)
 def cancel_booking(
