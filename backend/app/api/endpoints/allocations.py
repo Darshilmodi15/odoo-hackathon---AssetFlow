@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
-from app.models.asset import Allocation
+from app.models import Allocation
 from app.schemas.asset import AllocationCreate, AllocationReturn, AllocationResponse
 from app.services.asset import AssetService
 

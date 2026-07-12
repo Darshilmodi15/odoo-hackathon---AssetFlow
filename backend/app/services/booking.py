@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from app.models.asset import Asset, Booking
+from app.models import Asset, Booking
 from app.models.user import User
 from app.schemas.booking import BookingCreate
 from app.services.notification import NotificationService

@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from app.models.asset import Asset, Allocation
+from app.models import Asset, Allocation
 from app.models.maintenance import MaintenanceRequest, MaintenanceHistory
 from app.models.user import User
 from app.schemas.maintenance import MaintenanceCreate, MaintenanceUpdate

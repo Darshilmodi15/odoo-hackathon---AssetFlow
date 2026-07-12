@@ -1,7 +1,12 @@
-<<<<<<< HEAD
+import uuid
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+UserRole = Literal["admin", "asset_manager", "department_head", "employee"]
+UserStatus = Literal["active", "inactive"]
+
 
 class UserBase(BaseModel):
     name: str
@@ -9,9 +14,11 @@ class UserBase(BaseModel):
     role: str = "employee"
     status: str = "active"
 
+
 class UserCreate(UserBase):
     password: str
     department_id: Optional[str] = None
+
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -19,6 +26,7 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     status: Optional[str] = None
     department_id: Optional[str] = None
+
 
 class UserSignup(BaseModel):
     name: str
@@ -28,9 +36,11 @@ class UserSignup(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+
 class UserLogin(BaseModel):
     email: str
     password: str
+
 
 class UserResponse(BaseModel):
     id: str
@@ -45,15 +55,6 @@ class UserResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True
     )
-=======
-import uuid
-from datetime import datetime
-from typing import Literal
-
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
-UserRole = Literal["admin", "asset_manager", "department_head", "employee"]
-UserStatus = Literal["active", "inactive"]
 
 
 class UserRead(BaseModel):
@@ -90,4 +91,3 @@ class UserStatusUpdate(BaseModel):
 
 class UserListQuery(BaseModel):
     department_id: uuid.UUID | None = Field(default=None)
->>>>>>> 835db53a52e82859b982fe75ce7670b80b1489bd

@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.core import errors as err
-from app.models.asset import Asset, Allocation, TransferRequest
+from app.models import Asset, Allocation, TransferRequest
 from app.models.organization import AssetCategory, Department
 from app.models.user import User
 from app.schemas.asset import (

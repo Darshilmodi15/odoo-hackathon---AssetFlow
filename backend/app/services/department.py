@@ -5,7 +5,9 @@ Routes are responsible for HTTP only; all queries live here.
 import uuid
 from typing import Optional
 
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
+# pyrefly: ignore [missing-import]
 from sqlalchemy import or_
 
 from app.core import errors

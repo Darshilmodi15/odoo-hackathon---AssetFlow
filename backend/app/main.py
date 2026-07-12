@@ -52,6 +52,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Mount rich CRUD endpoints first
+app.include_router(api_router, prefix="/api")
 
 app.include_router(auth.router, prefix=settings.api_v1_str)
 app.include_router(users.router, prefix=settings.api_v1_str)
@@ -100,8 +102,6 @@ def database_health_check(db: Session = Depends(get_session)):
 
     return {"status": "ok", "database": database_status}
 
-# Include all API routers under the '/api' prefix
-app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn

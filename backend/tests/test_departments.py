@@ -1,6 +1,8 @@
 """Tests for Department CRUD endpoints."""
 import uuid
+# pyrefly: ignore [missing-import]
 import pytest
+# pyrefly: ignore [missing-import]
 from fastapi.testclient import TestClient
 
 from tests.conftest import make_department

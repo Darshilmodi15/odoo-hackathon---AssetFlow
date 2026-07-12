@@ -13,6 +13,7 @@ Rules:
 import uuid
 from datetime import date
 
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.core import security

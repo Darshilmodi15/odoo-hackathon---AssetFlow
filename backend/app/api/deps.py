@@ -41,15 +41,17 @@ def get_current_user(
 
     # 4. JWT Token decoding
     if token:
-        user_id = decode_access_token(token)
-        if user_id:
-            try:
-                user_uuid = uuid.UUID(user_id)
-                user = db.query(User).filter(User.id == user_uuid).first()
-                if user and user.status == "active":
-                    return user
-            except ValueError:
-                pass
+        payload = decode_access_token(token)
+        if payload and isinstance(payload, dict):
+            user_id = payload.get("sub")
+            if user_id:
+                try:
+                    user_uuid = uuid.UUID(str(user_id))
+                    user = db.query(User).filter(User.id == user_uuid).first()
+                    if user and user.status == "active":
+                        return user
+                except ValueError:
+                    pass
 
     # 5. Developer/Testing Fallback (read first user)
     user = db.query(User).first()

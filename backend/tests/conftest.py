@@ -98,6 +98,10 @@ def client(db: Session) -> TestClient:
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[deps.get_current_user] = get_test_user
 
+    from app.core.auth import get_current_user as core_get_current_user, get_active_user as core_get_active_user
+    app.dependency_overrides[core_get_current_user] = get_test_user
+    app.dependency_overrides[core_get_active_user] = get_test_user
+
     # Monkey-patch check_role so every call to deps.check_role([...]) returns
     # a FastAPI dependency function that resolves to our test admin.
     import app.api.deps as _deps
