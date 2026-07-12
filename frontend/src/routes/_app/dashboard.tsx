@@ -316,7 +316,10 @@ function DashboardPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -351,7 +354,10 @@ function DashboardPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -375,7 +381,10 @@ function DashboardPage() {
                     border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
+                    color: "var(--foreground)",
                   }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Line
                   type="monotone"

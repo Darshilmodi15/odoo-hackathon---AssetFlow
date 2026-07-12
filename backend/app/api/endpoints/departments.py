@@ -30,9 +30,12 @@ def list_departments(
     sort_by: str = Query("name", description="Field to sort by"),
     order: str = Query("asc", description="asc or desc"),
     db: Session = Depends(get_session),
-    current_user: User = Depends(deps.get_current_user),
 ):
-    """List departments with optional filters, pagination, and sorting."""
+    """List departments with optional filters, pagination, and sorting.
+
+    Public so the signup page can show department choices before login.
+    Create/update/status remain role-protected below.
+    """
     items, total = DepartmentService.get_list(
         db,
         search=search,

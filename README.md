@@ -15,6 +15,45 @@
 
 ---
 
+### 🚀 Local Demo Quick Start
+
+**Backend**
+```bash
+cd backend
+source .venv/bin/activate
+alembic upgrade head
+DEMO_PASSWORD='Demo@123' python -m app.db.seed_demo
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+**Frontend**
+```bash
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1
+```
+
+Expected frontend URL: `http://127.0.0.1:5174`
+
+Use real API mode for the final demo:
+```env
+VITE_USE_MOCKS=false
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+Demo accounts are seeded into PostgreSQL by `seed_demo`:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `demo.admin@assetflow.local` | `Demo@123` |
+| Asset Manager | `demo.manager@assetflow.local` | `Demo@123` |
+| Employee | `priya.demo@assetflow.local` | `Demo@123` |
+| Employee | `arjun.demo@assetflow.local` | `Demo@123` |
+
+Signup creates **Employee** accounts only. If signup says an email already exists, use **Sign in** with that email or choose a new email address.
+
+---
+
 ### 🌐 Overall Vision
 The vision for **AssetFlow** is to simplify and digitize how organizations track, allocate, and maintain their physical assets and shared resources through a centralized ERP platform. This is not tied to any single industry; any organization with equipment, furniture, vehicles, or shared spaces (offices, schools, hospitals, factories, agencies) can use it.
 
