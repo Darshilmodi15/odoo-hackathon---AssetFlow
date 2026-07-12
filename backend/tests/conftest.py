@@ -5,6 +5,7 @@ monkey-patching `deps.check_role` so every role check passes, and by
 overriding `get_current_user` with a dummy admin user.
 """
 import uuid
+# pyrefly: ignore [missing-import]
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
