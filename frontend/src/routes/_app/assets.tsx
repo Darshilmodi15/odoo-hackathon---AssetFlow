@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/hooks/useStore";
 import { store } from "@/mocks/store";
 import { assetService } from "@/services";
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/States";
-import { Plus, Search, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type { AssetCondition } from "@/types";
@@ -44,6 +44,7 @@ export const Route = createFileRoute("/_app/assets")({ component: AssetsPage });
 
 function AssetsPage() {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const assets = useStore(() => store.assets);
   const categories = useStore(() => store.categories);
   const departments = useStore(() => store.departments);
@@ -55,16 +56,30 @@ function AssetsPage() {
   const [dept, setDept] = useState("all");
   const [view, setView] = useState<"table" | "grid">("table");
   const [openNew, setOpenNew] = useState(false);
+  const [openScanner, setOpenScanner] = useState(false);
 
   const filtered = useMemo(
     () =>
-      assets.filter(
-        (a) =>
-          (a.name + a.tag + a.serialNumber).toLowerCase().includes(q.toLowerCase()) &&
+      assets.filter((a) => {
+        const searchable = [
+          a.name,
+          a.tag,
+          a.serialNumber,
+          a.location,
+          a.notes,
+          a.documentUrl,
+          a.photoUrl,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return (
+          searchable.includes(q.toLowerCase()) &&
           (status === "all" || a.status === status) &&
           (cat === "all" || a.categoryId === cat) &&
-          (dept === "all" || a.departmentId === dept),
-      ),
+          (dept === "all" || a.departmentId === dept)
+        );
+      }),
     [assets, q, status, cat, dept],
   );
 
@@ -103,12 +118,32 @@ function AssetsPage() {
                 <RegisterAssetDialog onDone={() => setOpenNew(false)} actorId={user!.id} />
               </Dialog>
             )}
+            <Dialog open={openScanner} onOpenChange={setOpenScanner}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <QrCode className="mr-1 h-4 w-4" />
+                  Scan QR
+                </Button>
+              </DialogTrigger>
+              <QrScannerDialog
+                onFound={(tag) => {
+                  const asset = assets.find((a) => a.tag.toLowerCase() === tag.toLowerCase());
+                  if (asset) {
+                    setOpenScanner(false);
+                    navigate({ to: "/assets/$assetId", params: { assetId: asset.id } });
+                  } else {
+                    setQ(tag);
+                    toast.error("No asset found for that QR/tag");
+                  }
+                }}
+              />
+            </Dialog>
           </div>
           <div className="flex flex-wrap gap-2">
             <div className="relative flex-1 min-w-40">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name, tag, serial…"
+                placeholder="Search by name, tag, serial, QR, location…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 className="h-9 pl-8"
@@ -254,6 +289,102 @@ function AssetsPage() {
   );
 }
 
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
+};
+
+function QrScannerDialog({ onFound }: { onFound: (tag: string) => void }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [manual, setManual] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [message, setMessage] = useState(
+    "Camera scanning is optional. Manual tag entry always works.",
+  );
+
+  useEffect(() => {
+    if (!scanning) return;
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    let frame = 0;
+
+    async function runScanner() {
+      const Detector = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor })
+        .BarcodeDetector;
+      if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+        setMessage("Camera QR scanning is not supported in this browser. Enter the asset tag.");
+        setScanning(false);
+        return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        const detector = new Detector({ formats: ["qr_code"] });
+        const scan = async () => {
+          if (cancelled || !videoRef.current) return;
+          const codes = await detector.detect(videoRef.current);
+          if (codes[0]?.rawValue) {
+            onFound(codes[0].rawValue.trim());
+            return;
+          }
+          frame = window.requestAnimationFrame(scan);
+        };
+        scan();
+      } catch {
+        setMessage("Camera permission was blocked. Enter the asset tag manually.");
+        setScanning(false);
+      }
+    }
+
+    runScanner();
+    return () => {
+      cancelled = true;
+      if (frame) window.cancelAnimationFrame(frame);
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, [onFound, scanning]);
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Scan Asset QR</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3">
+        <div className="grid aspect-video place-items-center overflow-hidden rounded-md border bg-muted">
+          {scanning ? (
+            <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+          ) : (
+            <QrCode className="h-12 w-12 text-muted-foreground" />
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">{message}</p>
+        <div className="flex gap-2">
+          <Input
+            value={manual}
+            placeholder="AF-0001"
+            className="font-mono"
+            onChange={(e) => setManual(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && manual.trim()) onFound(manual.trim());
+            }}
+          />
+          <Button type="button" onClick={() => manual.trim() && onFound(manual.trim())}>
+            Open
+          </Button>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => setScanning((s) => !s)}>
+          {scanning ? "Stop Camera" : "Start Camera"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
 function RegisterAssetDialog({ onDone, actorId }: { onDone: () => void; actorId: string }) {
   const categories = useStore(() => store.categories);
   const departments = useStore(() => store.departments);
@@ -269,8 +400,23 @@ function RegisterAssetDialog({ onDone, actorId }: { onDone: () => void; actorId:
     acquisitionCost: 0,
     shared: false,
     notes: "",
-    fileName: "",
+    photoUrl: "",
+    photoName: "",
+    documentUrl: "",
+    documentName: "",
+    customFields: {} as Record<string, string>,
   });
+  const selectedCategory = categories.find((c) => c.id === form.categoryId);
+
+  const captureFile = (file: File | undefined, kind: "photo" | "document") => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setForm((s) => ({
+      ...s,
+      [kind === "photo" ? "photoUrl" : "documentUrl"]: url,
+      [kind === "photo" ? "photoName" : "documentName"]: file.name,
+    }));
+  };
 
   const submit = async () => {
     if (!form.name || !form.categoryId || !form.serialNumber || !form.location) {
@@ -289,6 +435,11 @@ function RegisterAssetDialog({ onDone, actorId }: { onDone: () => void; actorId:
         acquisitionCost: Number(form.acquisitionCost),
         shared: form.shared,
         notes: form.notes,
+        photoUrl: form.photoUrl || undefined,
+        photoName: form.photoName || undefined,
+        documentUrl: form.documentUrl || undefined,
+        documentName: form.documentName || undefined,
+        customFields: form.customFields,
         status: "available",
       },
       actorId,
@@ -318,7 +469,7 @@ function RegisterAssetDialog({ onDone, actorId }: { onDone: () => void; actorId:
           <Label>Category *</Label>
           <Select
             value={form.categoryId}
-            onValueChange={(v) => setForm((s) => ({ ...s, categoryId: v }))}
+            onValueChange={(v) => setForm((s) => ({ ...s, categoryId: v, customFields: {} }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select" />
@@ -406,14 +557,61 @@ function RegisterAssetDialog({ onDone, actorId }: { onDone: () => void; actorId:
             onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label>Attachment</Label>
+        {selectedCategory?.customFields?.map((field) => (
+          <div key={field.key} className="space-y-2">
+            <Label>{field.label}</Label>
+            <Input
+              type={field.type}
+              value={form.customFields[field.key] || ""}
+              onChange={(e) =>
+                setForm((s) => ({
+                  ...s,
+                  customFields: { ...s.customFields, [field.key]: e.target.value },
+                }))
+              }
+            />
+          </div>
+        ))}
+        <div className="space-y-2">
+          <Label>Photo URL or filename</Label>
+          <Input
+            value={form.photoUrl}
+            placeholder="asset-photo.jpg"
+            onChange={(e) =>
+              setForm((s) => ({ ...s, photoUrl: e.target.value, photoName: e.target.value }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Document URL or filename</Label>
+          <Input
+            value={form.documentUrl}
+            placeholder="warranty.pdf"
+            onChange={(e) =>
+              setForm((s) => ({
+                ...s,
+                documentUrl: e.target.value,
+                documentName: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Upload photo preview</Label>
           <Input
             type="file"
-            onChange={(e) => setForm((s) => ({ ...s, fileName: e.target.files?.[0]?.name || "" }))}
+            accept="image/*"
+            onChange={(e) => captureFile(e.target.files?.[0], "photo")}
           />
-          {form.fileName && (
-            <div className="text-xs text-muted-foreground">Selected: {form.fileName}</div>
+          {form.photoName && (
+            <div className="text-xs text-muted-foreground">Photo: {form.photoName}</div>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>Upload document preview</Label>
+          <Input type="file" onChange={(e) => captureFile(e.target.files?.[0], "document")} />
+          {form.documentName && (
+            <div className="text-xs text-muted-foreground">Document: {form.documentName}</div>
           )}
         </div>
         <div className="flex items-center gap-2 sm:col-span-2">

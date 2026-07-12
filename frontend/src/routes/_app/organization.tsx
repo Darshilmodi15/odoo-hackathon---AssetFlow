@@ -78,7 +78,6 @@ function OrganizationPage() {
   );
 }
 
-
 function DepartmentsTab() {
   const departments = useStore(() => store.departments);
   const employees = useStore(() => store.employees);
@@ -249,7 +248,7 @@ function CategoriesTab() {
   const categories = useStore(() => store.categories);
   const assets = useStore(() => store.assets);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "" });
+  const [form, setForm] = useState({ name: "", description: "", customFields: "" });
 
   return (
     <Card>
@@ -281,6 +280,17 @@ function CategoriesTab() {
                   onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
                 />
               </div>
+              <div>
+                <Label>Category-specific fields</Label>
+                <Input
+                  value={form.customFields}
+                  placeholder="Warranty Until:date, Capacity:number"
+                  onChange={(e) => setForm((s) => ({ ...s, customFields: e.target.value }))}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use comma-separated Label:type values. Types: text, number, date.
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>
@@ -292,10 +302,33 @@ function CategoriesTab() {
                     toast.error("Name required");
                     return;
                   }
-                  await categoryService.create({ ...form, status: "active" });
+                  const customFields = form.customFields
+                    .split(",")
+                    .map((part) => part.trim())
+                    .filter(Boolean)
+                    .map((part) => {
+                      const [label, rawType] = part.split(":").map((p) => p.trim());
+                      const type = ["text", "number", "date"].includes(rawType)
+                        ? (rawType as "text" | "number" | "date")
+                        : "text";
+                      return {
+                        key: label
+                          .replace(/[^a-z0-9]+/gi, "_")
+                          .replace(/^_|_$/g, "")
+                          .toLowerCase(),
+                        label,
+                        type,
+                      };
+                    });
+                  await categoryService.create({
+                    name: form.name,
+                    description: form.description,
+                    customFields,
+                    status: "active",
+                  });
                   toast.success("Category created");
                   setOpen(false);
-                  setForm({ name: "", description: "" });
+                  setForm({ name: "", description: "", customFields: "" });
                 }}
               >
                 Create
@@ -321,6 +354,15 @@ function CategoriesTab() {
                 <div className="mt-3 text-xs text-muted-foreground">
                   {assets.filter((a) => a.categoryId === c.id).length} assets
                 </div>
+                {c.customFields && c.customFields.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {c.customFields.map((field) => (
+                      <span key={field.key} className="rounded bg-muted px-2 py-0.5 text-[10px]">
+                        {field.label} · {field.type}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-3 flex gap-2">
                   <Button
                     size="sm"

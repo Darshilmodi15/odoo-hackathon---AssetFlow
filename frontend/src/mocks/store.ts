@@ -40,7 +40,68 @@ class Store {
     };
   }
   emit() {
+    this.refreshOperationalState();
     this.listeners.forEach((l) => l());
+  }
+
+  refreshOperationalState() {
+    const now = new Date();
+    this.allocations.forEach((allocation) => {
+      if (
+        allocation.status === "active" &&
+        allocation.expectedReturnAt &&
+        new Date(allocation.expectedReturnAt) < now
+      ) {
+        allocation.status = "overdue";
+        const asset = this.assets.find((a) => a.id === allocation.assetId);
+        const exists = this.notifications.some(
+          (n) =>
+            n.type === "overdue" &&
+            n.userId === allocation.employeeId &&
+            n.link === `/allocations` &&
+            n.message.includes(asset?.tag || allocation.assetId),
+        );
+        if (allocation.employeeId && asset && !exists) {
+          this.notify({
+            userId: allocation.employeeId,
+            type: "overdue",
+            title: "Overdue return alert",
+            message: `${asset.name} (${asset.tag}) return is overdue`,
+            link: "/allocations",
+          });
+        }
+      }
+    });
+
+    this.bookings.forEach((booking) => {
+      if (booking.status === "cancelled") return;
+      const start = new Date(booking.startAt);
+      const end = new Date(booking.endAt);
+      if (end <= now) booking.status = "completed";
+      else if (start <= now && end > now) booking.status = "ongoing";
+      const minutesUntilStart = (start.getTime() - now.getTime()) / 60000;
+      const asset = this.assets.find((a) => a.id === booking.assetId);
+      const hasReminder = this.notifications.some(
+        (n) =>
+          n.type === "booking" &&
+          n.userId === booking.bookedById &&
+          n.title === "Booking reminder" &&
+          n.link === "/bookings" &&
+          n.message.includes(asset?.name || booking.id),
+      );
+      if (minutesUntilStart > 0 && minutesUntilStart <= 60 && !hasReminder && asset) {
+        this.notify({
+          userId: booking.bookedById,
+          type: "booking",
+          title: "Booking reminder",
+          message: `${asset.name} starts at ${start.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`,
+          link: "/bookings",
+        });
+      }
+    });
   }
 
   nextId(prefix: string) {

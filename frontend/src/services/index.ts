@@ -19,11 +19,194 @@ import type {
   AuditFindingStatus,
 } from "@/types";
 
-// -------- AUTH --------
-interface LoginResponse {
-  user: User;
-  token: string;
+// -------- API shape helpers --------
+type ApiUser = Omit<User, "departmentId" | "avatarUrl" | "joinedAt"> & {
+  department_id?: string | null;
+  avatar_url?: string | null;
+  joined_at?: string;
+};
+
+type ApiLoginResponse = {
+  access_token: string;
+  token_type: "bearer";
+  user: ApiUser;
+};
+
+type ApiDepartment = {
+  id: string;
+  name: string;
+  code: string;
+  head_id?: string | null;
+  parent_id?: string | null;
+  status: Department["status"];
+};
+
+type ApiCategory = {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: AssetCategory["status"];
+};
+
+type ApiAsset = {
+  id: string;
+  tag: string;
+  name: string;
+  category_id: string;
+  serial_number: string;
+  department_id?: string | null;
+  assigned_to_id?: string | null;
+  location: string;
+  condition: Asset["condition"];
+  status: Asset["status"];
+  shared: boolean;
+  acquisition_date: string;
+  acquisition_cost: number | string;
+  notes?: string | null;
+  updated_at: string;
+};
+
+type ApiAllocation = {
+  id: string;
+  asset_id: string;
+  employee_id: string;
+  department_id?: string | null;
+  allocated_at: string;
+  expected_return_at?: string | null;
+  returned_at?: string | null;
+  return_condition?: Asset["condition"] | null;
+  return_notes?: string | null;
+  status: Allocation["status"];
+  notes?: string | null;
+};
+
+type ApiTransfer = {
+  id: string;
+  code: string;
+  asset_id: string;
+  from_employee_id: string;
+  to_employee_id: string;
+  reason: string;
+  requested_by_id: string;
+  requested_at: string;
+  approver_id?: string | null;
+  status: TransferRequest["status"];
+};
+
+type ApiBooking = {
+  id: string;
+  asset_id: string;
+  booked_by_id: string;
+  department_id?: string | null;
+  start_at: string;
+  end_at: string;
+  purpose: string;
+  attendees?: number | null;
+  notes?: string | null;
+  status: Booking["status"];
+};
+
+
+function mapDepartment(d: ApiDepartment): Department {
+  return {
+    id: d.id,
+    name: d.name,
+    code: d.code,
+    headId: d.head_id ?? undefined,
+    parentId: d.parent_id ?? undefined,
+    status: d.status,
+  };
 }
+
+function mapCategory(c: ApiCategory): AssetCategory {
+  return {
+    id: c.id,
+    name: c.name,
+    description: c.description ?? undefined,
+    status: c.status,
+  };
+}
+
+function mapAsset(a: ApiAsset): Asset {
+  return {
+    id: a.id,
+    tag: a.tag,
+    name: a.name,
+    categoryId: a.category_id,
+    serialNumber: a.serial_number,
+    departmentId: a.department_id ?? undefined,
+    assignedToId: a.assigned_to_id ?? undefined,
+    location: a.location,
+    condition: a.condition,
+    status: a.status,
+    shared: a.shared,
+    acquisitionDate: a.acquisition_date,
+    acquisitionCost: Number(a.acquisition_cost),
+    notes: a.notes ?? undefined,
+    updatedAt: a.updated_at,
+  };
+}
+
+function mapUser(user: ApiUser): User {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    departmentId: user.department_id ?? undefined,
+    avatarUrl: user.avatar_url ?? undefined,
+    status: user.status,
+    joinedAt: user.joined_at ?? new Date().toISOString(),
+  };
+}
+
+function mapAllocation(a: ApiAllocation): Allocation {
+  return {
+    id: a.id,
+    assetId: a.asset_id,
+    employeeId: a.employee_id,
+    departmentId: a.department_id ?? undefined,
+    allocatedAt: a.allocated_at,
+    expectedReturnAt: a.expected_return_at ?? undefined,
+    returnedAt: a.returned_at ?? undefined,
+    returnCondition: a.return_condition ?? undefined,
+    returnNotes: a.return_notes ?? undefined,
+    status: a.status,
+    notes: a.notes ?? undefined,
+  };
+}
+
+function mapTransfer(t: ApiTransfer): TransferRequest {
+  return {
+    id: t.id,
+    code: t.code,
+    assetId: t.asset_id,
+    fromEmployeeId: t.from_employee_id,
+    toEmployeeId: t.to_employee_id,
+    reason: t.reason,
+    requestedById: t.requested_by_id,
+    requestedAt: t.requested_at,
+    approverId: t.approver_id ?? undefined,
+    status: t.status,
+  };
+}
+
+function mapBooking(b: ApiBooking): Booking {
+  return {
+    id: b.id,
+    assetId: b.asset_id,
+    bookedById: b.booked_by_id,
+    departmentId: b.department_id ?? undefined,
+    startAt: b.start_at,
+    endAt: b.end_at,
+    purpose: b.purpose,
+    attendees: b.attendees ?? undefined,
+    notes: b.notes ?? undefined,
+    status: b.status,
+  };
+}
+
+// -------- AUTH --------
 
 export const authService = {
   async login(email: string, password: string): Promise<User> {
@@ -33,10 +216,9 @@ export const authService = {
       if (!user) throw new Error("Invalid credentials");
       return user;
     }
-    // Real API returns { user, token }
-    const res = await apiClient.post<LoginResponse>("/auth/login", { email, password });
-    setToken(res.token);
-    return res.user;
+    const res = await apiClient.post<ApiLoginResponse>("/auth/login", { email, password });
+    setToken(res.access_token);
+    return mapUser(res.user);
   },
   async signup(input: {
     name: string;
@@ -68,14 +250,18 @@ export const authService = {
       store.emit();
       return user;
     }
-    const res = await apiClient.post<LoginResponse>("/auth/signup", input);
-    setToken(res.token);
-    return res.user;
+    const user = await apiClient.post<ApiUser>("/auth/signup", {
+      name: input.name,
+      email: input.email,
+      password: input.password,
+      department_id: input.departmentId,
+    });
+    return mapUser(user);
   },
   async me(): Promise<User | null> {
     if (USE_MOCKS) return null;
     try {
-      return await apiClient.get<User>("/auth/me");
+      return mapUser(await apiClient.get<ApiUser>("/auth/me"));
     } catch {
       return null;
     }
@@ -106,15 +292,37 @@ export const departmentService = {
       await mockDelay(50);
       return store.departments;
     }
-    return apiClient.get("/departments");
+    return (await apiClient.get<ApiDepartment[]>("/departments")).map(mapDepartment);
   },
   async create(d: Omit<Department, "id">): Promise<Department> {
+    if (!USE_MOCKS) {
+      return mapDepartment(
+        await apiClient.post<ApiDepartment>("/departments", {
+          name: d.name,
+          code: d.code,
+          head_id: d.headId,
+          parent_id: d.parentId,
+          status: d.status,
+        }),
+      );
+    }
     const dep = { ...d, id: store.nextId("d") };
     store.departments.push(dep);
     store.emit();
     return dep;
   },
   async update(id: string, patch: Partial<Department>) {
+    if (!USE_MOCKS) {
+      return mapDepartment(
+        await apiClient.patch<ApiDepartment>(`/departments/${id}`, {
+          name: patch.name,
+          code: patch.code,
+          head_id: patch.headId,
+          parent_id: patch.parentId,
+          status: patch.status,
+        }),
+      );
+    }
     const i = store.departments.findIndex((d) => d.id === id);
     if (i >= 0) store.departments[i] = { ...store.departments[i], ...patch };
     store.emit();
@@ -129,15 +337,33 @@ export const categoryService = {
       await mockDelay(50);
       return store.categories;
     }
-    return apiClient.get("/categories");
+    return (await apiClient.get<ApiCategory[]>("/categories")).map(mapCategory);
   },
   async create(c: Omit<AssetCategory, "id">) {
+    if (!USE_MOCKS) {
+      return mapCategory(
+        await apiClient.post<ApiCategory>("/categories", {
+          name: c.name,
+          description: c.description,
+          status: c.status,
+        }),
+      );
+    }
     const cat = { ...c, id: store.nextId("c") };
     store.categories.push(cat);
     store.emit();
     return cat;
   },
   async update(id: string, patch: Partial<AssetCategory>) {
+    if (!USE_MOCKS) {
+      return mapCategory(
+        await apiClient.patch<ApiCategory>(`/categories/${id}`, {
+          name: patch.name,
+          description: patch.description,
+          status: patch.status,
+        }),
+      );
+    }
     const i = store.categories.findIndex((c) => c.id === id);
     if (i >= 0) store.categories[i] = { ...store.categories[i], ...patch };
     store.emit();
@@ -152,9 +378,10 @@ export const employeeService = {
       await mockDelay(50);
       return store.employees;
     }
-    return apiClient.get("/employees");
+    return (await apiClient.get<ApiUser[]>("/users")).map(mapUser);
   },
   async updateRole(id: string, role: Role, actorId: string) {
+    if (!USE_MOCKS) return mapUser(await apiClient.patch<ApiUser>(`/users/${id}/role`, { role }));
     const emp = store.employees.find((e) => e.id === id);
     if (!emp) throw new Error("Not found");
     const prev = emp.role;
@@ -172,6 +399,9 @@ export const employeeService = {
     return emp;
   },
   async setStatus(id: string, status: "active" | "inactive") {
+    if (!USE_MOCKS) {
+      return mapUser(await apiClient.patch<ApiUser>(`/users/${id}/status`, { status }));
+    }
     const emp = store.employees.find((e) => e.id === id);
     if (!emp) throw new Error("Not found");
     emp.status = status;
@@ -187,16 +417,33 @@ export const assetService = {
       await mockDelay(50);
       return store.assets;
     }
-    return apiClient.get("/assets");
+    return (await apiClient.get<ApiAsset[]>("/assets")).map(mapAsset);
   },
   async get(id: string): Promise<Asset | undefined> {
     if (USE_MOCKS) return store.assets.find((a) => a.id === id);
-    return apiClient.get(`/assets/${id}`);
+    return mapAsset(await apiClient.get<ApiAsset>(`/assets/${id}`));
   },
   async create(
     input: Omit<Asset, "id" | "tag" | "updatedAt" | "status"> & { status?: AssetStatus },
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      return mapAsset(
+        await apiClient.post<ApiAsset>("/assets", {
+          name: input.name,
+          category_id: input.categoryId,
+          serial_number: input.serialNumber,
+          department_id: input.departmentId,
+          location: input.location,
+          condition: input.condition,
+          shared: input.shared,
+          acquisition_date: input.acquisitionDate,
+          acquisition_cost: input.acquisitionCost,
+          notes: input.notes,
+          status: input.status,
+        }),
+      );
+    }
     const asset: Asset = {
       ...input,
       id: store.nextId("a"),
@@ -218,6 +465,24 @@ export const assetService = {
     return asset;
   },
   async update(id: string, patch: Partial<Asset>) {
+    if (!USE_MOCKS) {
+      return mapAsset(
+        await apiClient.patch<ApiAsset>(`/assets/${id}`, {
+          name: patch.name,
+          category_id: patch.categoryId,
+          serial_number: patch.serialNumber,
+          department_id: patch.departmentId,
+          assigned_to_id: patch.assignedToId,
+          location: patch.location,
+          condition: patch.condition,
+          status: patch.status,
+          shared: patch.shared,
+          acquisition_date: patch.acquisitionDate,
+          acquisition_cost: patch.acquisitionCost,
+          notes: patch.notes,
+        }),
+      );
+    }
     const i = store.assets.findIndex((a) => a.id === id);
     if (i < 0) throw new Error("Not found");
     store.assets[i] = { ...store.assets[i], ...patch, updatedAt: new Date().toISOString() };
@@ -230,7 +495,7 @@ export const assetService = {
 export const allocationService = {
   async list(): Promise<Allocation[]> {
     if (USE_MOCKS) return store.allocations;
-    return apiClient.get("/allocations");
+    return (await apiClient.get<ApiAllocation[]>("/allocations")).map(mapAllocation);
   },
   async create(
     input: {
@@ -242,6 +507,17 @@ export const allocationService = {
     },
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      return mapAllocation(
+        await apiClient.post<ApiAllocation>("/allocations", {
+          asset_id: input.assetId,
+          employee_id: input.employeeId,
+          department_id: input.departmentId,
+          expected_return_at: input.expectedReturnAt,
+          notes: input.notes,
+        }),
+      );
+    }
     const asset = store.assets.find((a) => a.id === input.assetId);
     if (!asset) throw new Error("Asset not found");
     if (asset.status !== "available") {
@@ -294,6 +570,14 @@ export const allocationService = {
     input: { returnCondition: Asset["condition"]; returnNotes?: string },
     actorId: string,
   ) {
+    if (!USE_MOCKS) {
+      return mapAllocation(
+        await apiClient.post<ApiAllocation>(`/allocations/${id}/return`, {
+          condition_at_return: input.returnCondition,
+          condition_notes: input.returnNotes,
+        }),
+      );
+    }
     const a = store.allocations.find((x) => x.id === id);
     if (!a) throw new Error("Not found");
     a.returnedAt = new Date().toISOString();
@@ -324,12 +608,21 @@ export const allocationService = {
 export const transferService = {
   async list(): Promise<TransferRequest[]> {
     if (USE_MOCKS) return store.transfers;
-    return apiClient.get("/transfers");
+    return (await apiClient.get<ApiTransfer[]>("/transfers")).map(mapTransfer);
   },
   async create(
     input: { assetId: string; toEmployeeId: string; reason: string },
     requestedById: string,
   ) {
+    if (!USE_MOCKS) {
+      return mapTransfer(
+        await apiClient.post<ApiTransfer>("/transfers", {
+          asset_id: input.assetId,
+          to_employee_id: input.toEmployeeId,
+          reason: input.reason,
+        }),
+      );
+    }
     const asset = store.assets.find((a) => a.id === input.assetId);
     if (!asset) throw new Error("Asset not found");
     const fromEmployeeId = asset.assignedToId || "";
@@ -359,6 +652,8 @@ export const transferService = {
     return req;
   },
   async setStatus(id: string, status: TransferRequest["status"], approverId: string) {
+    if (!USE_MOCKS)
+      return mapTransfer(await apiClient.patch<ApiTransfer>(`/transfers/${id}/status`, { status }));
     const t = store.transfers.find((x) => x.id === id);
     if (!t) throw new Error("Not found");
     t.status = status;
@@ -402,9 +697,22 @@ export const transferService = {
 export const bookingService = {
   async list(): Promise<Booking[]> {
     if (USE_MOCKS) return store.bookings;
-    return apiClient.get("/bookings");
+    return (await apiClient.get<ApiBooking[]>("/bookings")).map(mapBooking);
   },
   async create(input: Omit<Booking, "id" | "status">, actorId: string) {
+    if (!USE_MOCKS) {
+      return mapBooking(
+        await apiClient.post<ApiBooking>("/bookings", {
+          asset_id: input.assetId,
+          department_id: input.departmentId,
+          start_at: input.startAt,
+          end_at: input.endAt,
+          purpose: input.purpose,
+          attendees: input.attendees,
+          notes: input.notes,
+        }),
+      );
+    }
     const conflict = findBookingConflict(input.assetId, input.startAt, input.endAt);
     if (conflict) {
       const asset = store.assets.find((a) => a.id === input.assetId);
@@ -440,6 +748,7 @@ export const bookingService = {
     return b;
   },
   async cancel(id: string, actorId: string) {
+    if (!USE_MOCKS) return mapBooking(await apiClient.del<ApiBooking>(`/bookings/${id}`));
     const b = store.bookings.find((x) => x.id === id);
     if (!b) throw new Error("Not found");
     b.status = "cancelled";
@@ -452,6 +761,41 @@ export const bookingService = {
       description: `${actor?.name} cancelled a booking`,
       role: actor?.role || "employee",
       status: "cancelled",
+    });
+    store.emit();
+    return b;
+  },
+  async reschedule(id: string, input: { startAt: string; endAt: string }, actorId: string) {
+    const b = store.bookings.find((x) => x.id === id);
+    if (!b) throw new Error("Not found");
+    const conflict = findBookingConflict(b.assetId, input.startAt, input.endAt, id);
+    if (conflict) {
+      const suggestions = suggestAlternativeBookings(b.assetId, input.startAt, input.endAt);
+      throw Object.assign(new Error("Selected time overlaps another booking."), {
+        code: "BOOKING_OVERLAP",
+        conflict,
+        suggestions,
+      });
+    }
+    b.startAt = input.startAt;
+    b.endAt = input.endAt;
+    b.status = "upcoming";
+    const actor = store.employees.find((e) => e.id === actorId);
+    const asset = store.assets.find((a) => a.id === b.assetId);
+    store.log({
+      userId: actorId,
+      action: "rescheduled_booking",
+      module: "Bookings",
+      entityId: b.id,
+      description: `${actor?.name} rescheduled ${asset?.name || "a resource"} booking`,
+      role: actor?.role || "employee",
+      status: "upcoming",
+    });
+    store.notify({
+      userId: b.bookedById,
+      type: "booking",
+      title: "Booking rescheduled",
+      message: `${asset?.name || "Resource"} booking was moved to ${new Date(input.startAt).toLocaleString()}`,
     });
     store.emit();
     return b;

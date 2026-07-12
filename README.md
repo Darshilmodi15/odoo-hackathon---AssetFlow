@@ -1,5 +1,4 @@
 # AssetFlow 🚀
-
 ## Enterprise Asset & Resource Management System
 *Developed for the **Odoo Hackathon***
 

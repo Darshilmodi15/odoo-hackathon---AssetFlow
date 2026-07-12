@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 
+from app.api.routes import allocations, assets, auth, bookings, organization, transfers, users
 from app.core.config import settings
 from app.db.session import get_session, engine, SessionLocal
 from app.db.base import Base
@@ -40,11 +41,25 @@ app = FastAPI(
 # Set up CORS middleware for development frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        settings.frontend_origin,
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router, prefix=settings.api_v1_str)
+app.include_router(users.router, prefix=settings.api_v1_str)
+app.include_router(organization.router, prefix=settings.api_v1_str)
+app.include_router(assets.router, prefix=settings.api_v1_str)
+app.include_router(allocations.router, prefix=settings.api_v1_str)
+app.include_router(transfers.router, prefix=settings.api_v1_str)
+app.include_router(bookings.router, prefix=settings.api_v1_str)
 
 
 @app.exception_handler(BookingOverlapException)

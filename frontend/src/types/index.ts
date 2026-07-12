@@ -24,6 +24,7 @@ export interface AssetCategory {
   id: string;
   name: string;
   description?: string;
+  customFields?: { key: string; label: string; type: "text" | "number" | "date" }[];
   status: "active" | "inactive";
 }
 
@@ -47,6 +48,11 @@ export interface Asset {
   acquisitionDate: string;
   acquisitionCost: number;
   notes?: string;
+  photoUrl?: string;
+  photoName?: string;
+  documentUrl?: string;
+  documentName?: string;
+  customFields?: Record<string, string>;
   updatedAt: string;
 }
 

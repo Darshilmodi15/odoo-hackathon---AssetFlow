@@ -9,4 +9,7 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "@tanstack/react-router"],
     tsconfigPaths: true,
   },
+  server: {
+    port: 5174,
+  },
 });
