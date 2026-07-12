@@ -25,10 +25,34 @@ export const departments: Department[] = [
 ];
 
 export const categories: AssetCategory[] = [
-  { id: "c1", name: "Electronics", description: "Laptops, phones, tablets", status: "active" },
+  {
+    id: "c1",
+    name: "Electronics",
+    description: "Laptops, phones, tablets",
+    customFields: [
+      { key: "warrantyUntil", label: "Warranty Until", type: "date" },
+      { key: "processor", label: "Processor / Model", type: "text" },
+    ],
+    status: "active",
+  },
   { id: "c2", name: "Furniture", description: "Chairs, desks, cabinets", status: "active" },
-  { id: "c3", name: "Vehicles", description: "Company vehicles", status: "active" },
-  { id: "c4", name: "Rooms", description: "Bookable rooms", status: "active" },
+  {
+    id: "c3",
+    name: "Vehicles",
+    description: "Company vehicles",
+    customFields: [
+      { key: "registrationNumber", label: "Registration Number", type: "text" },
+      { key: "insuranceUntil", label: "Insurance Until", type: "date" },
+    ],
+    status: "active",
+  },
+  {
+    id: "c4",
+    name: "Rooms",
+    description: "Bookable rooms",
+    customFields: [{ key: "capacity", label: "Capacity", type: "number" }],
+    status: "active",
+  },
   { id: "c5", name: "Equipment", description: "Projectors, printers", status: "active" },
   { id: "c6", name: "Software", description: "Software licenses", status: "active" },
 ];
