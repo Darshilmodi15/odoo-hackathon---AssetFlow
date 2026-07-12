@@ -1,12 +1,21 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { store } from "@/mocks/store";
+import { authService } from "@/services";
+import { USE_MOCKS, setToken } from "@/services/apiClient";
 import type { Role, User } from "@/types";
 
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   hydrated: boolean;
-  login: (email: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   setDemoUser: (id: string) => void;
   hasRole: (role: Role | Role[]) => boolean;
@@ -16,39 +25,79 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY = "assetflow.userId";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [, force] = useState({});
-  useEffect(() => {
-    setUserId(window.localStorage.getItem(STORAGE_KEY));
-    setHydrated(true);
-    return store.subscribe(() => force({}));
-  }, []);
 
-  const user = useMemo(
-    () => (userId ? store.employees.find((e) => e.id === userId) || null : null),
-    [userId],
-  );
+  // Rehydrate on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrate() {
+      if (USE_MOCKS) {
+        // Mock: restore user from stored userId
+        const storedId = window.localStorage.getItem(STORAGE_KEY);
+        const found = storedId
+          ? store.employees.find((e) => e.id === storedId) ?? null
+          : null;
+        if (!cancelled) {
+          setUser(found);
+          setHydrated(true);
+        }
+      } else {
+        // API: rehydrate from JWT via /auth/me
+        const me = await authService.me();
+        if (!cancelled) {
+          setUser(me);
+          setHydrated(true);
+        }
+      }
+    }
+
+    hydrate();
+
+    // Keep mock store in sync when it mutates
+    const unsub = USE_MOCKS
+      ? store.subscribe(() => {
+          const storedId = window.localStorage.getItem(STORAGE_KEY);
+          setUser(storedId ? store.employees.find((e) => e.id === storedId) ?? null : null);
+          force({});
+        })
+      : () => {};
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: !!user,
       hydrated,
-      async login(email: string) {
-        const u = store.employees.find((e) => e.email.toLowerCase() === email.toLowerCase());
-        if (!u) throw new Error("Invalid credentials");
-        window.localStorage.setItem(STORAGE_KEY, u.id);
-        setUserId(u.id);
+      async login(email, password) {
+        const u = await authService.login(email, password);
+        if (USE_MOCKS) {
+          // Mock path: persist the userId
+          window.localStorage.setItem(STORAGE_KEY, u.id);
+        }
+        setUser(u);
         return u;
       },
       logout() {
-        window.localStorage.removeItem(STORAGE_KEY);
-        setUserId(null);
+        authService.logout();
+        if (USE_MOCKS) {
+          window.localStorage.removeItem(STORAGE_KEY);
+        }
+        setUser(null);
       },
       setDemoUser(id: string) {
+        // Mock-only: switch the active demo persona
         window.localStorage.setItem(STORAGE_KEY, id);
-        setUserId(id);
+        const found = store.employees.find((e) => e.id === id) ?? null;
+        setUser(found);
       },
       hasRole(role) {
         if (!user) return false;
@@ -75,3 +124,6 @@ export const roleLabel = (r: Role) =>
     department_head: "Department Head",
     employee: "Employee",
   })[r];
+
+// Re-export for convenience so callers don't need to import setToken separately
+export { setToken };
