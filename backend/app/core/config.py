@@ -1,14 +1,16 @@
-from functools import lru_cache
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    database_url: str
+    migration_database_url: str | None = None
+
+    frontend_origin: str = "http://localhost:5173"
+    environment: str = "development"
     project_name: str = "AssetFlow API"
     api_v1_str: str = "/api"
-    secret_key: str = "temporary_development_secret_key_change_in_production"
+    secret_key: str
     access_token_expire_minutes: int = 11520
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/assetflow"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -17,9 +19,4 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
-
-
-settings = get_settings()
+settings = Settings()

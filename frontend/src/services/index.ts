@@ -1,6 +1,6 @@
 // All services: use mock store in demo mode, ready to swap to API client.
 import { store, findBookingConflict, suggestAlternativeBookings } from "@/mocks/store";
-import { USE_MOCKS, mockDelay, apiClient } from "./apiClient";
+import { USE_MOCKS, mockDelay, apiClient, setToken } from "./apiClient";
 import type {
   Asset,
   Allocation,
@@ -20,15 +20,23 @@ import type {
 } from "@/types";
 
 // -------- AUTH --------
+interface LoginResponse {
+  user: User;
+  token: string;
+}
+
 export const authService = {
-  async login(email: string, _password: string): Promise<User> {
+  async login(email: string, password: string): Promise<User> {
     if (USE_MOCKS) {
       await mockDelay();
       const user = store.employees.find((e) => e.email.toLowerCase() === email.toLowerCase());
       if (!user) throw new Error("Invalid credentials");
       return user;
     }
-    return apiClient.post<User>("/auth/login", { email, password: _password });
+    // Real API returns { user, token }
+    const res = await apiClient.post<LoginResponse>("/auth/login", { email, password });
+    setToken(res.token);
+    return res.user;
   },
   async signup(input: {
     name: string;
@@ -60,18 +68,34 @@ export const authService = {
       store.emit();
       return user;
     }
-    return apiClient.post<User>("/auth/signup", input);
+    const res = await apiClient.post<LoginResponse>("/auth/signup", input);
+    setToken(res.token);
+    return res.user;
   },
   async me(): Promise<User | null> {
     if (USE_MOCKS) return null;
-    return apiClient.get<User>("/auth/me");
+    try {
+      return await apiClient.get<User>("/auth/me");
+    } catch {
+      return null;
+    }
   },
-  async forgotPassword(_email: string): Promise<void> {
+  async forgotPassword(email: string): Promise<void> {
     if (USE_MOCKS) {
       await mockDelay();
       return;
     }
-    await apiClient.post("/auth/forgot-password", { email: _email });
+    await apiClient.post("/auth/forgot-password", { email });
+  },
+  async logout(): Promise<void> {
+    if (!USE_MOCKS) {
+      try {
+        await apiClient.post("/auth/logout");
+      } catch {
+        // best-effort
+      }
+    }
+    setToken(null);
   },
 };
 

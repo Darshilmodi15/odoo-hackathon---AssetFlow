@@ -4,12 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.db.session import get_db, engine
+from app.db.session import get_session, engine
 from app.db.base import Base
-# Import models to ensure they are registered with Base.metadata before create_all
-from fastapi.responses import JSONResponse
 from app.services.booking import BookingOverlapException
 import app.models  # noqa
 from app.api.router import api_router
@@ -52,7 +51,7 @@ def check_database(db: Session) -> str:
     return "connected"
 
 @app.get("/api/health", tags=["Health"])
-def health_check(db: Session = Depends(get_db)):
+def health_check(db: Session = Depends(get_session)):
     """
     Service health check endpoint with PostgreSQL connectivity verification.
     """
@@ -64,7 +63,7 @@ def health_check(db: Session = Depends(get_db)):
     return {"status": "ok", "database": database_status}
 
 @app.get("/api/health/db-status", tags=["Health"])
-def database_health_check(db: Session = Depends(get_db)):
+def database_health_check(db: Session = Depends(get_session)):
     """
     Dedicated PostgreSQL connectivity check used before API integration work.
     """

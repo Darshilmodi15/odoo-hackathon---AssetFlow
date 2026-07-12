@@ -11,7 +11,11 @@ db_type = "postgresql"
 if db_url.startswith("postgresql"):
     try:
         # Quick test connection
-        temp_engine = create_engine(db_url, pool_pre_ping=True)
+        temp_engine = create_engine(
+            db_url,
+            pool_pre_ping=True,
+            pool_recycle=300,
+        )
         conn = temp_engine.connect()
         conn.close()
         engine = temp_engine
@@ -22,15 +26,20 @@ if db_url.startswith("postgresql"):
 
 if engine is None:
     connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
-    engine = create_engine(db_url, connect_args=connect_args, pool_pre_ping=True).execution_options(insertmanyvalues=False)
+    engine = create_engine(
+        db_url,
+        connect_args=connect_args,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    ).execution_options(insertmanyvalues=False)
     if db_url.startswith("sqlite"):
         db_type = "sqlite"
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_session() -> Generator[Session, None, None]:
+    with Session(engine) as session:
+        yield session
+
+# Alias for backward compatibility
+get_db = get_session

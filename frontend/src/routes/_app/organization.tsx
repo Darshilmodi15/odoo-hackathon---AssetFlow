@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useRoleGuard } from "@/hooks/useRoleGuard";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/hooks/useStore";
@@ -54,20 +55,9 @@ import type { Role } from "@/types";
 export const Route = createFileRoute("/_app/organization")({ component: OrganizationPage });
 
 function OrganizationPage() {
-  const { user, hasRole } = useAuth();
-  if (!hasRole("admin")) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
-          <ShieldAlert className="h-10 w-10 text-muted-foreground" />
-          <h3 className="font-semibold">Admins only</h3>
-          <p className="text-sm text-muted-foreground">
-            You need administrator permissions to access Organization Setup.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const { user } = useAuth();
+  const { permitted } = useRoleGuard(["admin"]);
+  if (!permitted) return null;
   return (
     <Tabs defaultValue="departments">
       <TabsList>
@@ -87,6 +77,7 @@ function OrganizationPage() {
     </Tabs>
   );
 }
+
 
 function DepartmentsTab() {
   const departments = useStore(() => store.departments);
