@@ -1,0 +1,153 @@
+import type {
+  Department, AssetCategory, User, Asset, Allocation, TransferRequest,
+  Booking, MaintenanceRequest, AuditCycle, Notification, ActivityLog,
+} from "@/types";
+
+const iso = (d: Date) => d.toISOString();
+const daysAgo = (n: number) => iso(new Date(Date.now() - n * 86400000));
+const daysAhead = (n: number) => iso(new Date(Date.now() + n * 86400000));
+
+export const departments: Department[] = [
+  { id: "d1", name: "Information Technology", code: "IT", headId: "e2", status: "active" },
+  { id: "d2", name: "Human Resources", code: "HR", headId: "e5", status: "active" },
+  { id: "d3", name: "Finance", code: "FIN", headId: "e7", status: "active" },
+  { id: "d4", name: "Operations", code: "OPS", headId: "e9", status: "active" },
+  { id: "d5", name: "Administration", code: "ADM", headId: "e11", status: "active" },
+];
+
+export const categories: AssetCategory[] = [
+  { id: "c1", name: "Electronics", description: "Laptops, phones, tablets", status: "active" },
+  { id: "c2", name: "Furniture", description: "Chairs, desks, cabinets", status: "active" },
+  { id: "c3", name: "Vehicles", description: "Company vehicles", status: "active" },
+  { id: "c4", name: "Rooms", description: "Bookable rooms", status: "active" },
+  { id: "c5", name: "Equipment", description: "Projectors, printers", status: "active" },
+  { id: "c6", name: "Software", description: "Software licenses", status: "active" },
+];
+
+export const employees: User[] = [
+  { id: "e1", name: "Anita Rao", email: "anita.rao@assetflow.co", role: "admin", departmentId: "d5", status: "active", joinedAt: daysAgo(800) },
+  { id: "e2", name: "Raj Mehta", email: "raj.mehta@assetflow.co", role: "asset_manager", departmentId: "d1", status: "active", joinedAt: daysAgo(600) },
+  { id: "e3", name: "Priya Shah", email: "priya.shah@assetflow.co", role: "employee", departmentId: "d1", status: "active", joinedAt: daysAgo(400) },
+  { id: "e4", name: "Arjun Nair", email: "arjun.nair@assetflow.co", role: "employee", departmentId: "d1", status: "active", joinedAt: daysAgo(350) },
+  { id: "e5", name: "Sneha Iyer", email: "sneha.iyer@assetflow.co", role: "department_head", departmentId: "d2", status: "active", joinedAt: daysAgo(700) },
+  { id: "e6", name: "Vikram Desai", email: "vikram.desai@assetflow.co", role: "employee", departmentId: "d2", status: "active", joinedAt: daysAgo(300) },
+  { id: "e7", name: "Meera Kulkarni", email: "meera.kulkarni@assetflow.co", role: "department_head", departmentId: "d3", status: "active", joinedAt: daysAgo(650) },
+  { id: "e8", name: "Rohit Verma", email: "rohit.verma@assetflow.co", role: "employee", departmentId: "d3", status: "active", joinedAt: daysAgo(280) },
+  { id: "e9", name: "Kavita Menon", email: "kavita.menon@assetflow.co", role: "department_head", departmentId: "d4", status: "active", joinedAt: daysAgo(500) },
+  { id: "e10", name: "Sanjay Pillai", email: "sanjay.pillai@assetflow.co", role: "employee", departmentId: "d4", status: "active", joinedAt: daysAgo(200) },
+  { id: "e11", name: "Divya Krishnan", email: "divya.krishnan@assetflow.co", role: "asset_manager", departmentId: "d5", status: "active", joinedAt: daysAgo(750) },
+  { id: "e12", name: "Aditya Bose", email: "aditya.bose@assetflow.co", role: "employee", departmentId: "d5", status: "active", joinedAt: daysAgo(150) },
+];
+
+export const assets: Asset[] = [
+  { id: "a1", tag: "AF-0001", name: "Dell Latitude 7420", categoryId: "c1", serialNumber: "DL7420-88291", departmentId: "d1", assignedToId: "e3", location: "IT Wing, Floor 3", condition: "excellent", status: "allocated", shared: false, acquisitionDate: daysAgo(300), acquisitionCost: 85000, updatedAt: daysAgo(30) },
+  { id: "a2", tag: "AF-0002", name: "MacBook Air M2", categoryId: "c1", serialNumber: "MBA-M2-11209", departmentId: "d1", assignedToId: "e4", location: "IT Wing, Floor 3", condition: "excellent", status: "allocated", shared: false, acquisitionDate: daysAgo(200), acquisitionCost: 115000, updatedAt: daysAgo(15) },
+  { id: "a3", tag: "AF-0003", name: "Epson Projector EB-X41", categoryId: "c5", serialNumber: "EP-X41-4421", location: "Conference Room A", condition: "good", status: "available", shared: true, acquisitionDate: daysAgo(500), acquisitionCost: 42000, updatedAt: daysAgo(60) },
+  { id: "a4", tag: "AF-0004", name: "Meeting Room B2", categoryId: "c4", serialNumber: "ROOM-B2", location: "Building B, Floor 2", condition: "excellent", status: "available", shared: true, acquisitionDate: daysAgo(1000), acquisitionCost: 0, updatedAt: daysAgo(100) },
+  { id: "a5", tag: "AF-0005", name: "Canon Printer MF743", categoryId: "c5", serialNumber: "CN-MF743-9982", departmentId: "d3", location: "Finance Wing", condition: "good", status: "available", shared: false, acquisitionDate: daysAgo(400), acquisitionCost: 35000, updatedAt: daysAgo(45) },
+  { id: "a6", tag: "AF-0006", name: "Toyota Innova Crysta", categoryId: "c3", serialNumber: "MH-01-AB-4421", location: "Parking Bay 3", condition: "good", status: "available", shared: true, acquisitionDate: daysAgo(700), acquisitionCost: 1800000, updatedAt: daysAgo(20) },
+  { id: "a7", tag: "AF-0007", name: "Ergonomic Workstation", categoryId: "c2", serialNumber: "WS-ERG-1023", departmentId: "d2", assignedToId: "e6", location: "HR Wing", condition: "good", status: "allocated", shared: false, acquisitionDate: daysAgo(600), acquisitionCost: 28000, updatedAt: daysAgo(90) },
+  { id: "a8", tag: "AF-0008", name: "Industrial Scanner", categoryId: "c5", serialNumber: "SCN-IND-771", departmentId: "d4", location: "Operations Bay", condition: "fair", status: "under_maintenance", shared: false, acquisitionDate: daysAgo(900), acquisitionCost: 65000, updatedAt: daysAgo(5) },
+  { id: "a9", tag: "AF-0009", name: "Lenovo ThinkPad X1", categoryId: "c1", serialNumber: "LN-X1-8821", departmentId: "d3", assignedToId: "e8", location: "Finance Wing", condition: "good", status: "allocated", shared: false, acquisitionDate: daysAgo(250), acquisitionCost: 95000, updatedAt: daysAgo(40) },
+  { id: "a10", tag: "AF-0010", name: "HP EliteDesk 800", categoryId: "c1", serialNumber: "HP-ED800-3391", location: "Storage Room", condition: "good", status: "available", shared: false, acquisitionDate: daysAgo(350), acquisitionCost: 55000, updatedAt: daysAgo(70) },
+  { id: "a11", tag: "AF-0011", name: "Conference Room A", categoryId: "c4", serialNumber: "ROOM-A", location: "Building A, Floor 1", condition: "excellent", status: "available", shared: true, acquisitionDate: daysAgo(1000), acquisitionCost: 0, updatedAt: daysAgo(100) },
+  { id: "a12", tag: "AF-0012", name: "Maruti Suzuki Swift", categoryId: "c3", serialNumber: "MH-02-CD-9987", location: "Parking Bay 5", condition: "fair", status: "available", shared: true, acquisitionDate: daysAgo(1200), acquisitionCost: 750000, updatedAt: daysAgo(80) },
+  { id: "a13", tag: "AF-0013", name: "iPad Pro 12.9", categoryId: "c1", serialNumber: "IPAD-P12-2211", departmentId: "d5", assignedToId: "e12", location: "Admin Office", condition: "excellent", status: "allocated", shared: false, acquisitionDate: daysAgo(120), acquisitionCost: 110000, updatedAt: daysAgo(10) },
+  { id: "a14", tag: "AF-0014", name: "Executive Desk", categoryId: "c2", serialNumber: "DESK-EX-5521", departmentId: "d5", location: "Admin Wing", condition: "excellent", status: "available", shared: false, acquisitionDate: daysAgo(500), acquisitionCost: 22000, updatedAt: daysAgo(150) },
+  { id: "a15", tag: "AF-0015", name: "Logitech Webcam Kit", categoryId: "c5", serialNumber: "LOG-WC-4421", location: "IT Storage", condition: "good", status: "available", shared: true, acquisitionDate: daysAgo(180), acquisitionCost: 15000, updatedAt: daysAgo(25) },
+  { id: "a16", tag: "AF-0016", name: "Dell OptiPlex 7080", categoryId: "c1", serialNumber: "DL-OP-7080-1", location: "Storage Room", condition: "poor", status: "retired", shared: false, acquisitionDate: daysAgo(1800), acquisitionCost: 45000, updatedAt: daysAgo(30) },
+  { id: "a17", tag: "AF-0017", name: "Samsung Monitor 27\"", categoryId: "c1", serialNumber: "SM-27-8891", departmentId: "d1", assignedToId: "e3", location: "IT Wing, Floor 3", condition: "good", status: "allocated", shared: false, acquisitionDate: daysAgo(300), acquisitionCost: 25000, updatedAt: daysAgo(30) },
+  { id: "a18", tag: "AF-0018", name: "Whiteboard 6ft", categoryId: "c2", serialNumber: "WB-6FT-221", location: "Training Room", condition: "good", status: "available", shared: true, acquisitionDate: daysAgo(600), acquisitionCost: 8000, updatedAt: daysAgo(200) },
+  { id: "a19", tag: "AF-0019", name: "Training Room", categoryId: "c4", serialNumber: "ROOM-TR", location: "Building A, Floor 2", condition: "excellent", status: "available", shared: true, acquisitionDate: daysAgo(1000), acquisitionCost: 0, updatedAt: daysAgo(100) },
+  { id: "a20", tag: "AF-0020", name: "Xerox WorkCentre", categoryId: "c5", serialNumber: "XR-WC-3321", location: "Print Room", condition: "fair", status: "lost", shared: false, acquisitionDate: daysAgo(800), acquisitionCost: 48000, updatedAt: daysAgo(60) },
+];
+
+export const allocations: Allocation[] = [
+  { id: "al1", assetId: "a1", employeeId: "e3", departmentId: "d1", allocatedAt: daysAgo(120), expectedReturnAt: daysAhead(240), status: "active" },
+  { id: "al2", assetId: "a2", employeeId: "e4", departmentId: "d1", allocatedAt: daysAgo(90), expectedReturnAt: daysAhead(275), status: "active" },
+  { id: "al3", assetId: "a7", employeeId: "e6", departmentId: "d2", allocatedAt: daysAgo(200), status: "active" },
+  { id: "al4", assetId: "a9", employeeId: "e8", departmentId: "d3", allocatedAt: daysAgo(150), expectedReturnAt: daysAgo(5), status: "overdue" },
+  { id: "al5", assetId: "a13", employeeId: "e12", departmentId: "d5", allocatedAt: daysAgo(60), expectedReturnAt: daysAhead(30), status: "active" },
+  { id: "al6", assetId: "a17", employeeId: "e3", departmentId: "d1", allocatedAt: daysAgo(120), expectedReturnAt: daysAhead(240), status: "active" },
+  { id: "al7", assetId: "a10", employeeId: "e10", departmentId: "d4", allocatedAt: daysAgo(400), returnedAt: daysAgo(30), returnCondition: "good", status: "returned" },
+  { id: "al8", assetId: "a3", employeeId: "e5", departmentId: "d2", allocatedAt: daysAgo(300), returnedAt: daysAgo(200), returnCondition: "good", status: "returned" },
+];
+
+export const transfers: TransferRequest[] = [
+  { id: "t1", code: "TR-0021", assetId: "a1", fromEmployeeId: "e3", toEmployeeId: "e4", reason: "Reassignment due to project change", requestedById: "e3", requestedAt: daysAgo(3), status: "requested" },
+  { id: "t2", code: "TR-0022", assetId: "a2", fromEmployeeId: "e4", toEmployeeId: "e6", reason: "Cross-department transfer", requestedById: "e2", requestedAt: daysAgo(5), approverId: "e2", status: "approved" },
+  { id: "t3", code: "TR-0023", assetId: "a9", fromEmployeeId: "e8", toEmployeeId: "e3", reason: "Backup device required", requestedById: "e8", requestedAt: daysAgo(10), approverId: "e2", status: "rejected" },
+  { id: "t4", code: "TR-0024", assetId: "a13", fromEmployeeId: "e12", toEmployeeId: "e10", reason: "Field work requirement", requestedById: "e12", requestedAt: daysAgo(1), status: "requested" },
+];
+
+const today = new Date(); today.setHours(0,0,0,0);
+const at = (dayOffset: number, h: number, m = 0) => {
+  const d = new Date(today); d.setDate(d.getDate() + dayOffset); d.setHours(h, m, 0, 0); return d.toISOString();
+};
+
+export const bookings: Booking[] = [
+  { id: "b1", assetId: "a4", bookedById: "e3", departmentId: "d1", startAt: at(0, 9), endAt: at(0, 10), purpose: "Sprint planning", attendees: 8, status: "upcoming" },
+  { id: "b2", assetId: "a4", bookedById: "e5", departmentId: "d2", startAt: at(0, 14), endAt: at(0, 15), purpose: "HR review", attendees: 4, status: "upcoming" },
+  { id: "b3", assetId: "a11", bookedById: "e7", departmentId: "d3", startAt: at(1, 10), endAt: at(1, 12), purpose: "Budget review", attendees: 6, status: "upcoming" },
+  { id: "b4", assetId: "a6", bookedById: "e9", departmentId: "d4", startAt: at(1, 9), endAt: at(1, 17), purpose: "Site visit", status: "upcoming" },
+  { id: "b5", assetId: "a19", bookedById: "e2", departmentId: "d1", startAt: at(2, 10), endAt: at(2, 13), purpose: "Onboarding", attendees: 15, status: "upcoming" },
+  { id: "b6", assetId: "a4", bookedById: "e4", departmentId: "d1", startAt: at(-1, 11), endAt: at(-1, 12), purpose: "Client demo", attendees: 5, status: "completed" },
+  { id: "b7", assetId: "a12", bookedById: "e10", departmentId: "d4", startAt: at(3, 9), endAt: at(3, 12), purpose: "Vendor pickup", status: "upcoming" },
+  { id: "b8", assetId: "a3", bookedById: "e6", departmentId: "d2", startAt: at(0, 15), endAt: at(0, 16), purpose: "Team presentation", attendees: 10, status: "upcoming" },
+];
+
+export const maintenance: MaintenanceRequest[] = [
+  { id: "m1", code: "MR-0031", assetId: "a8", requestedById: "e10", title: "Scanner not responding", description: "Scanner freezes after 10 pages", priority: "high", status: "in_progress", requestedAt: daysAgo(8), technicianId: "e11", estimatedCost: 5000, history: [{ at: daysAgo(8), status: "pending" }, { at: daysAgo(7), status: "approved", byId: "e2" }, { at: daysAgo(6), status: "assigned", byId: "e2" }, { at: daysAgo(4), status: "in_progress" }] },
+  { id: "m2", code: "MR-0032", assetId: "a5", requestedById: "e8", title: "Printer paper jam", description: "Frequent paper jams on tray 2", priority: "medium", status: "pending", requestedAt: daysAgo(2), history: [{ at: daysAgo(2), status: "pending" }] },
+  { id: "m3", code: "MR-0033", assetId: "a6", requestedById: "e9", title: "Vehicle service due", description: "10,000 km service required", priority: "medium", status: "approved", requestedAt: daysAgo(5), history: [{ at: daysAgo(5), status: "pending" }, { at: daysAgo(4), status: "approved", byId: "e2" }] },
+  { id: "m4", code: "MR-0034", assetId: "a2", requestedById: "e4", title: "Keyboard keys sticky", description: "Several keys not registering", priority: "low", status: "resolved", requestedAt: daysAgo(30), technicianId: "e11", estimatedCost: 3000, actualCost: 2500, resolutionNotes: "Replaced keyboard", history: [{ at: daysAgo(30), status: "pending" }, { at: daysAgo(29), status: "approved", byId: "e2" }, { at: daysAgo(28), status: "assigned", byId: "e2" }, { at: daysAgo(25), status: "in_progress" }, { at: daysAgo(22), status: "resolved" }] },
+  { id: "m5", code: "MR-0035", assetId: "a3", requestedById: "e5", title: "Projector bulb dim", description: "Image is very dim during presentations", priority: "high", status: "assigned", requestedAt: daysAgo(3), technicianId: "e11", history: [{ at: daysAgo(3), status: "pending" }, { at: daysAgo(2), status: "approved", byId: "e2" }, { at: daysAgo(1), status: "assigned", byId: "e2" }] },
+  { id: "m6", code: "MR-0036", assetId: "a12", requestedById: "e10", title: "AC not cooling", description: "Vehicle AC not working", priority: "critical", status: "pending", requestedAt: daysAgo(1), history: [{ at: daysAgo(1), status: "pending" }] },
+  { id: "m7", code: "MR-0037", assetId: "a17", requestedById: "e3", title: "Monitor flickering", description: "Display flickers intermittently", priority: "medium", status: "rejected", requestedAt: daysAgo(10), history: [{ at: daysAgo(10), status: "pending" }, { at: daysAgo(9), status: "rejected", byId: "e2", note: "Cable issue, resolved by user" }] },
+];
+
+export const audits: AuditCycle[] = [
+  { id: "au1", title: "Q2 IT Assets Audit", scopeDepartmentId: "d1", startDate: daysAgo(20), endDate: daysAhead(10), auditorIds: ["e11", "e2"], status: "active", findings: [
+    { id: "af1", assetId: "a1", status: "verified", auditorId: "e11", at: daysAgo(5) },
+    { id: "af2", assetId: "a2", status: "verified", auditorId: "e11", at: daysAgo(5) },
+    { id: "af3", assetId: "a17", status: "damaged", notes: "Screen has minor scratches", auditorId: "e11", at: daysAgo(4) },
+    { id: "af4", assetId: "a10", status: "pending" },
+    { id: "af5", assetId: "a15", status: "pending" },
+  ]},
+  { id: "au2", title: "Q1 Admin Assets Audit", scopeDepartmentId: "d5", startDate: daysAgo(120), endDate: daysAgo(90), auditorIds: ["e11"], status: "closed", findings: [
+    { id: "af6", assetId: "a13", status: "verified", auditorId: "e11", at: daysAgo(100) },
+    { id: "af7", assetId: "a14", status: "verified", auditorId: "e11", at: daysAgo(100) },
+    { id: "af8", assetId: "a20", status: "missing", notes: "Not found at recorded location", auditorId: "e11", at: daysAgo(95) },
+  ]},
+];
+
+export const notifications: Notification[] = [
+  { id: "n1", userId: "e3", type: "allocation", title: "Asset assigned", message: "Dell Latitude 7420 (AF-0001) has been allocated to you", read: false, at: daysAgo(1), link: "/assets/a1" },
+  { id: "n2", userId: "e3", type: "transfer", title: "Transfer requested", message: "Your transfer request TR-0021 is pending approval", read: false, at: daysAgo(3), link: "/allocations" },
+  { id: "n3", userId: "e8", type: "overdue", title: "Overdue return", message: "Lenovo ThinkPad X1 (AF-0009) return is overdue", read: false, at: daysAgo(5), link: "/allocations" },
+  { id: "n4", userId: "e10", type: "maintenance", title: "Maintenance approved", message: "MR-0033 has been approved", read: true, at: daysAgo(4), link: "/maintenance" },
+  { id: "n5", userId: "e3", type: "booking", title: "Booking confirmed", message: "Meeting Room B2 booked for today 9:00 AM", read: true, at: daysAgo(0), link: "/bookings" },
+  { id: "n6", userId: "e5", type: "booking", title: "Booking reminder", message: "Meeting Room B2 booked in 30 minutes", read: false, at: daysAgo(0), link: "/bookings" },
+  { id: "n7", userId: "e2", type: "maintenance", title: "New maintenance request", message: "MR-0036 (Critical) requires approval", read: false, at: daysAgo(1), link: "/maintenance" },
+  { id: "n8", userId: "e2", type: "transfer", title: "Transfer request pending", message: "TR-0024 needs your review", read: false, at: daysAgo(1), link: "/allocations" },
+  { id: "n9", userId: "e11", type: "audit", title: "Audit discrepancy flagged", message: "Damaged asset found in Q2 IT Audit", read: false, at: daysAgo(4), link: "/audits" },
+  { id: "n10", userId: "e1", type: "audit", title: "Audit closed", message: "Q1 Admin Assets Audit was closed", read: true, at: daysAgo(90), link: "/audits" },
+];
+
+export const activityLogs: ActivityLog[] = [
+  { id: "l1", userId: "e2", action: "allocated_asset", module: "Allocations", entityId: "a1", description: "Raj Mehta allocated Dell Latitude 7420 (AF-0001) to Priya Shah", role: "asset_manager", at: daysAgo(120) },
+  { id: "l2", userId: "e2", action: "approved_transfer", module: "Transfers", entityId: "t2", description: "Raj Mehta approved transfer request TR-0022", role: "asset_manager", at: daysAgo(5), status: "approved" },
+  { id: "l3", userId: "e1", action: "closed_audit", module: "Audits", entityId: "au2", description: "Audit Cycle Q1 Admin Assets was closed by Admin", role: "admin", at: daysAgo(90), status: "closed" },
+  { id: "l4", userId: "e10", action: "raised_maintenance", module: "Maintenance", entityId: "m6", description: "Sanjay Pillai raised critical maintenance MR-0036 for Maruti Swift", role: "employee", at: daysAgo(1) },
+  { id: "l5", userId: "e2", action: "approved_maintenance", module: "Maintenance", entityId: "m3", description: "Raj Mehta approved maintenance request MR-0033", role: "asset_manager", at: daysAgo(4), status: "approved" },
+  { id: "l6", userId: "e3", action: "booked_resource", module: "Bookings", entityId: "b1", description: "Priya Shah booked Meeting Room B2 for sprint planning", role: "employee", at: daysAgo(0) },
+  { id: "l7", userId: "e2", action: "rejected_maintenance", module: "Maintenance", entityId: "m7", description: "Raj Mehta rejected maintenance request MR-0037", role: "asset_manager", at: daysAgo(9), status: "rejected" },
+  { id: "l8", userId: "e11", action: "flagged_discrepancy", module: "Audits", entityId: "au1", description: "Divya Krishnan flagged damaged asset AF-0017 during audit", role: "asset_manager", at: daysAgo(4) },
+  { id: "l9", userId: "e1", action: "created_audit", module: "Audits", entityId: "au1", description: "Anita Rao created audit cycle Q2 IT Assets Audit", role: "admin", at: daysAgo(20) },
+  { id: "l10", userId: "e3", action: "requested_transfer", module: "Transfers", entityId: "t1", description: "Priya Shah requested transfer TR-0021", role: "employee", at: daysAgo(3) },
+  { id: "l11", userId: "e2", action: "registered_asset", module: "Assets", entityId: "a15", description: "Raj Mehta registered new asset Logitech Webcam Kit (AF-0015)", role: "asset_manager", at: daysAgo(180) },
+  { id: "l12", userId: "e1", action: "promoted_employee", module: "Employees", entityId: "e11", description: "Anita Rao promoted Divya Krishnan to Asset Manager", role: "admin", at: daysAgo(200) },
+  { id: "l13", userId: "e10", action: "returned_asset", module: "Allocations", entityId: "al7", description: "Sanjay Pillai returned HP EliteDesk 800", role: "employee", at: daysAgo(30), status: "returned" },
+  { id: "l14", userId: "e5", action: "cancelled_booking", module: "Bookings", entityId: "b6", description: "Sneha Iyer cancelled a booking", role: "department_head", at: daysAgo(2), status: "cancelled" },
+  { id: "l15", userId: "e2", action: "assigned_technician", module: "Maintenance", entityId: "m5", description: "Raj Mehta assigned technician to MR-0035", role: "asset_manager", at: daysAgo(1) },
+];
