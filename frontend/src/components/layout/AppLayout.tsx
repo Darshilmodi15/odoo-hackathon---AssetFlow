@@ -1,15 +1,36 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Building2, Package, ArrowLeftRight, Calendar,
-  Wrench, ClipboardCheck, BarChart3, Bell, Settings, HelpCircle,
-  LogOut, Menu, Search, Moon, Sun, User as UserIcon, ChevronDown,
+  LayoutDashboard,
+  Building2,
+  Package,
+  ArrowLeftRight,
+  Calendar,
+  Wrench,
+  ClipboardCheck,
+  BarChart3,
+  Bell,
+  Settings,
+  HelpCircle,
+  LogOut,
+  Menu,
+  Search,
+  Moon,
+  Sun,
+  User as UserIcon,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth, roleLabel } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +41,12 @@ import { useStore } from "@/hooks/useStore";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types";
 
-interface NavItem { to: string; label: string; icon: typeof LayoutDashboard; roles?: Role[] }
+interface NavItem {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  roles?: Role[];
+}
 
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -36,39 +62,60 @@ const NAV: NavItem[] = [
 ];
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard", "/organization": "Organization Setup", "/assets": "Assets",
-  "/allocations": "Allocations & Transfers", "/bookings": "Resource Bookings",
-  "/maintenance": "Maintenance", "/audits": "Asset Audits", "/reports": "Reports & Analytics",
-  "/activity": "Activity & Notifications", "/settings": "Settings", "/profile": "My Profile",
+  "/dashboard": "Dashboard",
+  "/organization": "Organization Setup",
+  "/assets": "Assets",
+  "/allocations": "Allocations & Transfers",
+  "/bookings": "Resource Bookings",
+  "/maintenance": "Maintenance",
+  "/audits": "Asset Audits",
+  "/reports": "Reports & Analytics",
+  "/activity": "Activity & Notifications",
+  "/settings": "Settings",
+  "/profile": "My Profile",
 };
 
 function useTheme() {
-  const [dark, setDark] = useState(() => typeof window !== "undefined" && document.documentElement.classList.contains("dark"));
-  useEffect(() => { document.documentElement.classList.toggle("dark", dark); }, [dark]);
-  return { dark, toggle: () => setDark(d => !d) };
+  const [dark, setDark] = useState(
+    () => typeof window !== "undefined" && document.documentElement.classList.contains("dark"),
+  );
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+  return { dark, toggle: () => setDark((d) => !d) };
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, hasRole, logout } = useAuth();
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: s => s.location.pathname });
-  const items = NAV.filter(i => !i.roles || (user && i.roles.includes(user.role)));
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const items = NAV.filter((i) => !i.roles || (user && i.roles.includes(user.role)));
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-bold">A</div>
+        <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-bold">
+          A
+        </div>
         <div className="font-semibold">AssetFlow</div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-        {items.map(item => {
-          const active = pathname === item.to || (item.to !== "/dashboard" && pathname.startsWith(item.to + "/"));
+        {items.map((item) => {
+          const active =
+            pathname === item.to ||
+            (item.to !== "/dashboard" && pathname.startsWith(item.to + "/"));
           return (
-            <Link key={item.to} to={item.to} onClick={onNavigate}
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                active ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/80"
-              )}>
+                active
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/80",
+              )}
+            >
               <item.icon className="h-4 w-4 shrink-0" />
               <span className="truncate">{item.label}</span>
             </Link>
@@ -76,24 +123,49 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
       <div className="border-t border-sidebar-border p-2 space-y-0.5">
-        <button onClick={() => { navigate({ to: "/settings" }); onNavigate?.(); }}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-sidebar-foreground/80">
+        <button
+          onClick={() => {
+            navigate({ to: "/settings" });
+            onNavigate?.();
+          }}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-sidebar-foreground/80"
+        >
           <HelpCircle className="h-4 w-4" /> Help
         </button>
-        <button onClick={() => { navigate({ to: "/profile" }); onNavigate?.(); }}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-sidebar-foreground/80">
+        <button
+          onClick={() => {
+            navigate({ to: "/profile" });
+            onNavigate?.();
+          }}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-sidebar-foreground/80"
+        >
           <UserIcon className="h-4 w-4" /> Profile
         </button>
-        <button onClick={() => { logout(); navigate({ to: "/login" }); }}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-sidebar-foreground/80">
+        <button
+          onClick={() => {
+            logout();
+            navigate({ to: "/login" });
+          }}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-sidebar-foreground/80"
+        >
           <LogOut className="h-4 w-4" /> Logout
         </button>
         {user && (
           <div className="mt-2 flex items-center gap-2 rounded-md bg-sidebar-accent/50 px-3 py-2">
-            <Avatar className="h-8 w-8"><AvatarFallback>{user.name.split(" ").map(n=>n[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>
+                {user.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
             <div className="min-w-0 flex-1">
               <div className="truncate text-xs font-medium">{user.name}</div>
-              <div className="truncate text-[10px] text-sidebar-foreground/60">{roleLabel(user.role)}</div>
+              <div className="truncate text-[10px] text-sidebar-foreground/60">
+                {roleLabel(user.role)}
+              </div>
             </div>
           </div>
         )}
@@ -105,12 +177,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
-  const pathname = useRouterState({ select: s => s.location.pathname });
-  const title = Object.entries(PAGE_TITLES).find(([p]) => pathname.startsWith(p))?.[1] || "AssetFlow";
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const title =
+    Object.entries(PAGE_TITLES).find(([p]) => pathname.startsWith(p))?.[1] || "AssetFlow";
   const { user, setDemoUser, logout } = useAuth();
   const navigate = useNavigate();
   const { dark, toggle } = useTheme();
-  const unread = useStore(() => user ? store.notifications.filter(n => n.userId === user.id && !n.read).length : 0);
+  const unread = useStore(() =>
+    user ? store.notifications.filter((n) => n.userId === user.id && !n.read).length : 0,
+  );
   const employees = useStore(() => store.employees);
 
   return (
@@ -122,44 +197,92 @@ function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
         <div className="relative hidden sm:block">
           <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search assets, employees…" className="h-9 w-56 pl-8" onKeyDown={(e) => {
-            if (e.key === "Enter") navigate({ to: "/assets", search: { q: (e.target as HTMLInputElement).value } as never });
-          }} />
+          <Input
+            placeholder="Search assets, employees…"
+            className="h-9 w-56 pl-8"
+            onKeyDown={(e) => {
+              if (e.key === "Enter")
+                navigate({
+                  to: "/assets",
+                  search: { q: (e.target as HTMLInputElement).value } as never,
+                });
+            }}
+          />
         </div>
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
           {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
-        <Button variant="ghost" size="icon" className="relative" onClick={() => navigate({ to: "/activity" })} aria-label="Notifications">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => navigate({ to: "/activity" })}
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
-          {unread > 0 && <Badge className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-[10px]" variant="destructive">{unread}</Badge>}
+          {unread > 0 && (
+            <Badge
+              className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-[10px]"
+              variant="destructive"
+            >
+              {unread}
+            </Badge>
+          )}
         </Button>
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-9 gap-2 px-2">
-                <Avatar className="h-7 w-7"><AvatarFallback className="text-xs">{user.name.split(" ").map(n=>n[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="text-xs">
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="hidden text-left sm:block">
                   <div className="text-xs font-medium leading-tight">{user.name}</div>
-                  <div className="text-[10px] leading-tight text-muted-foreground">{roleLabel(user.role)}</div>
+                  <div className="text-[10px] leading-tight text-muted-foreground">
+                    {roleLabel(user.role)}
+                  </div>
                 </div>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>My Profile</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
+                My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Demo Role Switcher</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Demo Role Switcher
+              </DropdownMenuLabel>
               <DropdownMenuRadioGroup value={user.id} onValueChange={setDemoUser}>
-                {(["admin","asset_manager","department_head","employee"] as Role[]).map(role => {
-                  const sample = employees.find(e => e.role === role);
-                  if (!sample) return null;
-                  return <DropdownMenuRadioItem key={role} value={sample.id}>{roleLabel(role)} — {sample.name}</DropdownMenuRadioItem>;
-                })}
+                {(["admin", "asset_manager", "department_head", "employee"] as Role[]).map(
+                  (role) => {
+                    const sample = employees.find((e) => e.role === role);
+                    if (!sample) return null;
+                    return (
+                      <DropdownMenuRadioItem key={role} value={sample.id}>
+                        {roleLabel(role)} — {sample.name}
+                      </DropdownMenuRadioItem>
+                    );
+                  },
+                )}
               </DropdownMenuRadioGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { logout(); navigate({ to: "/login" }); }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  logout();
+                  navigate({ to: "/login" });
+                }}
+              >
                 <LogOut className="mr-2 h-4 w-4" /> Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -175,11 +298,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="hidden w-64 shrink-0 border-r border-sidebar-border md:block">
-        <div className="sticky top-0 h-screen"><SidebarContent /></div>
+        <div className="sticky top-0 h-screen">
+          <SidebarContent />
+        </div>
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetTrigger asChild><span className="hidden" /></SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0"><SidebarContent onNavigate={() => setMobileOpen(false)} /></SheetContent>
+        <SheetTrigger asChild>
+          <span className="hidden" />
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <SidebarContent onNavigate={() => setMobileOpen(false)} />
+        </SheetContent>
       </Sheet>
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onOpenSidebar={() => setMobileOpen(true)} />

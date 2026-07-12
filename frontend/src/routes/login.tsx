@@ -27,7 +27,8 @@ function LoginPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); setLoading(true);
+    setError("");
+    setLoading(true);
     try {
       const u = await login(email);
       toast.success(`Welcome, ${u.name}`);
@@ -38,36 +39,64 @@ function LoginPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg bg-primary text-primary-foreground text-xl font-bold">A</div>
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg bg-primary text-primary-foreground text-xl font-bold">
+            A
+          </div>
           <CardTitle className="text-2xl">Welcome to AssetFlow</CardTitle>
           <CardDescription>Sign in to manage your organization's assets</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
-            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot?</Link>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot?
+                </Link>
               </div>
-              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox id="remember" defaultChecked />
-              <Label htmlFor="remember" className="text-sm font-normal">Remember me</Label>
+              <Label htmlFor="remember" className="text-sm font-normal">
+                Remember me
+              </Label>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in…" : "Sign in"}
+            </Button>
             <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-xs">
               <div className="mb-1 font-medium text-foreground">Demo accounts (any password):</div>
               <ul className="space-y-0.5 text-muted-foreground">
@@ -78,7 +107,10 @@ function LoginPage() {
               </ul>
             </div>
             <p className="text-center text-sm text-muted-foreground">
-              New here? <Link to="/signup" className="font-medium text-primary hover:underline">Create an account</Link>
+              New here?{" "}
+              <Link to="/signup" className="font-medium text-primary hover:underline">
+                Create an account
+              </Link>
             </p>
           </form>
         </CardContent>

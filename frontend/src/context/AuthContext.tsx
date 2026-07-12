@@ -25,33 +25,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return store.subscribe(() => force({}));
   }, []);
 
-  const user = useMemo(() => userId ? store.employees.find(e => e.id === userId) || null : null, [userId]);
+  const user = useMemo(
+    () => (userId ? store.employees.find((e) => e.id === userId) || null : null),
+    [userId],
+  );
 
-  const value = useMemo<AuthContextValue>(() => ({
-    user,
-    isAuthenticated: !!user,
-    hydrated,
-    async login(email: string) {
-      const u = store.employees.find(e => e.email.toLowerCase() === email.toLowerCase());
-      if (!u) throw new Error("Invalid credentials");
-      window.localStorage.setItem(STORAGE_KEY, u.id);
-      setUserId(u.id);
-      return u;
-    },
-    logout() {
-      window.localStorage.removeItem(STORAGE_KEY);
-      setUserId(null);
-    },
-    setDemoUser(id: string) {
-      window.localStorage.setItem(STORAGE_KEY, id);
-      setUserId(id);
-    },
-    hasRole(role) {
-      if (!user) return false;
-      const roles = Array.isArray(role) ? role : [role];
-      return roles.includes(user.role);
-    },
-  }), [user, hydrated]);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      hydrated,
+      async login(email: string) {
+        const u = store.employees.find((e) => e.email.toLowerCase() === email.toLowerCase());
+        if (!u) throw new Error("Invalid credentials");
+        window.localStorage.setItem(STORAGE_KEY, u.id);
+        setUserId(u.id);
+        return u;
+      },
+      logout() {
+        window.localStorage.removeItem(STORAGE_KEY);
+        setUserId(null);
+      },
+      setDemoUser(id: string) {
+        window.localStorage.setItem(STORAGE_KEY, id);
+        setUserId(id);
+      },
+      hasRole(role) {
+        if (!user) return false;
+        const roles = Array.isArray(role) ? role : [role];
+        return roles.includes(user.role);
+      },
+    }),
+    [user, hydrated],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -63,4 +69,9 @@ export function useAuth() {
 }
 
 export const roleLabel = (r: Role) =>
-  ({ admin: "Admin", asset_manager: "Asset Manager", department_head: "Department Head", employee: "Employee" }[r]);
+  ({
+    admin: "Admin",
+    asset_manager: "Asset Manager",
+    department_head: "Department Head",
+    employee: "Employee",
+  })[r];

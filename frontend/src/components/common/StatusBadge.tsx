@@ -1,5 +1,12 @@
 import { cn } from "@/lib/utils";
-import type { AssetStatus, AssetCondition, MaintenanceStatus, MaintenancePriority, BookingStatus, AuditStatus } from "@/types";
+import type {
+  AssetStatus,
+  AssetCondition,
+  MaintenanceStatus,
+  MaintenancePriority,
+  BookingStatus,
+  AuditStatus,
+} from "@/types";
 import { Badge } from "@/components/ui/badge";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -40,10 +47,26 @@ const STATUS_STYLES: Record<string, string> = {
   damaged: "bg-warning/15 text-warning-foreground border-warning/40",
 };
 
-export function StatusBadge({ status, className }: { status: AssetStatus | AssetCondition | MaintenanceStatus | MaintenancePriority | BookingStatus | AuditStatus | string; className?: string }) {
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status:
+    | AssetStatus
+    | AssetCondition
+    | MaintenanceStatus
+    | MaintenancePriority
+    | BookingStatus
+    | AuditStatus
+    | string;
+  className?: string;
+}) {
   const label = String(status).replace(/_/g, " ");
   return (
-    <Badge variant="outline" className={cn("capitalize font-normal", STATUS_STYLES[status] || "", className)}>
+    <Badge
+      variant="outline"
+      className={cn("capitalize font-normal", STATUS_STYLES[status] || "", className)}
+    >
       {label}
     </Badge>
   );

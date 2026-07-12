@@ -1,8 +1,16 @@
 import { Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 
-export function EmptyState({ icon: Icon = Inbox, title, description, action }: {
-  icon?: typeof Inbox; title: string; description?: string; action?: ReactNode;
+export function EmptyState({
+  icon: Icon = Inbox,
+  title,
+  description,
+  action,
+}: {
+  icon?: typeof Inbox;
+  title: string;
+  description?: string;
+  action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/50 px-6 py-12 text-center">
@@ -30,8 +38,14 @@ export function ErrorState({ error, onRetry }: { error: Error | string; onRetry?
   return (
     <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
       <h3 className="text-sm font-semibold text-destructive">Something went wrong</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{typeof error === "string" ? error : error.message}</p>
-      {onRetry && <button onClick={onRetry} className="mt-4 text-sm font-medium text-primary hover:underline">Try again</button>}
+      <p className="mt-1 text-sm text-muted-foreground">
+        {typeof error === "string" ? error : error.message}
+      </p>
+      {onRetry && (
+        <button onClick={onRetry} className="mt-4 text-sm font-medium text-primary hover:underline">
+          Try again
+        </button>
+      )}
     </div>
   );
 }
