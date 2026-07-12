@@ -359,7 +359,7 @@ export const allocationService = {
   ) {
     if (!USE_MOCKS) {
       return mapAllocation(
-        await apiClient.post<any>("/allocations", {
+        await apiClient.post<ApiAllocation>("/allocations", {
           asset_id: input.assetId,
           employee_id: input.employeeId,
           department_id: input.departmentId,
@@ -422,7 +422,7 @@ export const allocationService = {
   ) {
     if (!USE_MOCKS) {
       return mapAllocation(
-        await apiClient.post<any>(`/allocations/${id}/return`, {
+        await apiClient.post<ApiAllocation>(`/allocations/${id}/return`, {
           condition_at_return: input.returnCondition,
           condition_notes: input.returnNotes,
         }),
@@ -466,7 +466,7 @@ export const transferService = {
   ) {
     if (!USE_MOCKS) {
       return mapTransfer(
-        await apiClient.post<any>("/transfers", {
+        await apiClient.post<ApiTransfer>("/transfers", {
           asset_id: input.assetId,
           to_employee_id: input.toEmployeeId,
           reason: input.reason,
@@ -503,7 +503,7 @@ export const transferService = {
   },
   async setStatus(id: string, status: TransferRequest["status"], approverId: string) {
     if (!USE_MOCKS)
-      return mapTransfer(await apiClient.patch<any>(`/transfers/${id}/status`, { status }));
+      return mapTransfer(await apiClient.patch<ApiTransfer>(`/transfers/${id}/status`, { status }));
     const t = store.transfers.find((x) => x.id === id);
     if (!t) throw new Error("Not found");
     t.status = status;
@@ -552,7 +552,7 @@ export const bookingService = {
   async create(input: Omit<Booking, "id" | "status">, actorId: string) {
     if (!USE_MOCKS) {
       return mapBooking(
-        await apiClient.post<any>("/bookings", {
+        await apiClient.post<ApiBooking>("/bookings", {
           asset_id: input.assetId,
           department_id: input.departmentId,
           start_at: input.startAt,
@@ -598,7 +598,7 @@ export const bookingService = {
     return b;
   },
   async cancel(id: string, actorId: string) {
-    if (!USE_MOCKS) return mapBooking(await apiClient.del<any>(`/bookings/${id}`));
+    if (!USE_MOCKS) return mapBooking(await apiClient.del<ApiBooking>(`/bookings/${id}`));
     const b = store.bookings.find((x) => x.id === id);
     if (!b) throw new Error("Not found");
     b.status = "cancelled";
