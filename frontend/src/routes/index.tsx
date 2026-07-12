@@ -164,7 +164,7 @@ function LandingPage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Log In <ArrowRight className="h-4 w-4" />
             </Link>
@@ -174,6 +174,12 @@ function LandingPage() {
             >
               Sign Up
             </Link>
+            <a
+              href="#features"
+              className="rounded-md border bg-card px-6 py-3 text-center font-semibold shadow-sm hover:bg-accent"
+            >
+              Explore Platform
+            </a>
           </div>
         </div>
         <div id="product" className="rounded-lg border bg-card p-4 shadow-xl shadow-primary/10">
