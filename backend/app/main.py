@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.session import get_db
+from app.db.session import get_session
 
 app = FastAPI(
     title=settings.project_name,
@@ -29,7 +29,7 @@ def check_database(db: Session) -> str:
 
 
 @app.get("/api/health", tags=["Health"])
-def health_check(db: Session = Depends(get_db)):
+def health_check(db: Session = Depends(get_session)):
     """
     Service health check endpoint with PostgreSQL connectivity verification.
     """
@@ -42,7 +42,7 @@ def health_check(db: Session = Depends(get_db)):
 
 
 @app.get("/api/health/db-status", tags=["Health"])
-def database_health_check(db: Session = Depends(get_db)):
+def database_health_check(db: Session = Depends(get_session)):
     """
     Dedicated PostgreSQL connectivity check used before API integration work.
     """
