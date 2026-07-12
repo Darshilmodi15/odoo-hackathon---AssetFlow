@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useRoleGuard } from "@/hooks/useRoleGuard";
 import { useState } from "react";
 import { useStore } from "@/hooks/useStore";
 import { store } from "@/mocks/store";
@@ -54,24 +55,13 @@ export const Route = createFileRoute("/_app/audits")({ component: AuditsPage });
 
 function AuditsPage() {
   const { user, hasRole } = useAuth();
+  const { permitted } = useRoleGuard(["admin", "asset_manager"]);
   const audits = useStore(() => store.audits);
   const departments = useStore(() => store.departments);
   const [openNew, setOpenNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  if (!hasRole(["admin", "asset_manager"])) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
-          <ShieldAlert className="h-10 w-10 text-muted-foreground" />
-          <h3 className="font-semibold">Restricted</h3>
-          <p className="text-sm text-muted-foreground">
-            Only admins and asset managers can access audits.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!permitted) return null;
 
   if (openId)
     return (
