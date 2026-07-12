@@ -28,13 +28,7 @@ export interface AssetCategory {
 }
 
 export type AssetStatus =
-  | "available"
-  | "allocated"
-  | "reserved"
-  | "under_maintenance"
-  | "lost"
-  | "retired"
-  | "disposed";
+  "available" | "allocated" | "reserved" | "under_maintenance" | "lost" | "retired" | "disposed";
 
 export type AssetCondition = "excellent" | "good" | "fair" | "poor";
 
@@ -100,12 +94,7 @@ export interface Booking {
 
 export type MaintenancePriority = "low" | "medium" | "high" | "critical";
 export type MaintenanceStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "assigned"
-  | "in_progress"
-  | "resolved";
+  "pending" | "approved" | "rejected" | "assigned" | "in_progress" | "resolved";
 
 export interface MaintenanceRequest {
   id: string;
@@ -151,12 +140,7 @@ export interface AuditCycle {
 }
 
 export type NotificationType =
-  | "allocation"
-  | "transfer"
-  | "maintenance"
-  | "booking"
-  | "audit"
-  | "overdue";
+  "allocation" | "transfer" | "maintenance" | "booking" | "audit" | "overdue";
 
 export interface Notification {
   id: string;

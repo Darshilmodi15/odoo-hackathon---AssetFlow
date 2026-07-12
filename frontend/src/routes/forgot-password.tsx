@@ -24,17 +24,37 @@ function ForgotPage() {
           {sent ? (
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>If an account exists for <b>{email}</b>, we've sent a reset link.</AlertDescription>
+              <AlertDescription>
+                If an account exists for <b>{email}</b>, we've sent a reset link.
+              </AlertDescription>
             </Alert>
           ) : (
-            <form onSubmit={(e) => { e.preventDefault(); setSent(true); }} className="space-y-4">
-              <div className="space-y-2"><Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required /></div>
-              <Button type="submit" className="w-full">Send reset link</Button>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setSent(true);
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Send reset link
+              </Button>
             </form>
           )}
           <p className="mt-4 text-center text-sm">
-            <Link to="/login" className="text-primary hover:underline">Back to sign in</Link>
+            <Link to="/login" className="text-primary hover:underline">
+              Back to sign in
+            </Link>
           </p>
         </CardContent>
       </Card>
