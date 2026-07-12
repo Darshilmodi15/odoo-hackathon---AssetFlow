@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api import deps
 from app.models.user import User
-from app.schemas.asset import AssetCreate, AssetResponse
+from app.schemas.asset import AssetCreate, AssetUpdate, AssetResponse
 from app.services.asset import AssetService
 
 router = APIRouter()
@@ -42,3 +42,16 @@ def create_asset(
     Create a new asset.
     """
     return AssetService.create(db, asset_in, current_user)
+
+@router.put("/{id}", response_model=AssetResponse)
+def update_asset(
+    id: uuid.UUID,
+    asset_in: AssetUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Update an existing asset's details.
+    """
+    return AssetService.update(db, id, asset_in, current_user)
+

@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 
 from app.models.asset import Asset, Allocation, TransferRequest
 from app.models.user import User
-from app.schemas.asset import AssetCreate, AllocationCreate, AllocationReturn, TransferCreate, TransferStatusUpdate
+from app.schemas.asset import AssetCreate, AssetUpdate, AllocationCreate, AllocationReturn, TransferCreate, TransferStatusUpdate
 from app.services.notification import NotificationService
 from app.services.log import LogService
 
@@ -324,3 +324,40 @@ class AssetService:
             status="success"
         )
         return tr
+
+    @staticmethod
+    def update(db: Session, asset_id: uuid.UUID, asset_in: AssetUpdate, actor: User):
+        asset = db.query(Asset).filter(Asset.id == asset_id).first()
+        if not asset:
+            raise HTTPException(status_code=404, detail="Asset not found")
+
+        update_data = asset_in.model_dump(exclude_unset=True)
+        
+        # Check duplicate serial number if changing
+        if "serial_number" in update_data and update_data["serial_number"] != asset.serial_number:
+            duplicate = db.query(Asset).filter(Asset.serial_number == update_data["serial_number"]).first()
+            if duplicate:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Asset with this serial number already exists."
+                )
+
+        for field in update_data:
+            setattr(asset, field, update_data[field])
+
+        db.commit()
+        db.refresh(asset)
+
+        # Log action
+        LogService.create(
+            db=db,
+            user_id=actor.id,
+            action="update_asset",
+            module="Assets",
+            description=f"Updated asset {asset.tag} ({asset.name})",
+            role=actor.role,
+            entity_id=asset.id,
+            status="success"
+        )
+        return asset
+

@@ -18,6 +18,19 @@ class AssetBase(BaseModel):
 class AssetCreate(AssetBase):
     department_id: Optional[uuid.UUID] = None
 
+class AssetUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=120)
+    category_id: Optional[uuid.UUID] = None
+    serial_number: Optional[str] = Field(None, min_length=1, max_length=120)
+    department_id: Optional[uuid.UUID] = None
+    location: Optional[str] = Field(None, min_length=1, max_length=120)
+    condition: Optional[str] = Field(None, min_length=1, max_length=20)
+    shared: Optional[bool] = None
+    acquisition_date: Optional[date] = None
+    acquisition_cost: Optional[float] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
 class AssetResponse(AssetBase):
     id: uuid.UUID
     tag: str
