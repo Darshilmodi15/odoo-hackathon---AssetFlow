@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { format, addDays, startOfDay } from "date-fns";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { Booking } from "@/types";
 
 export const Route = createFileRoute("/_app/bookings")({ component: BookingsPage });
 
@@ -63,6 +64,7 @@ function BookingsPage() {
   const [resourceId, setResourceId] = useState<string>(assets[0]?.id || "");
   const [dayOffset, setDayOffset] = useState(0);
   const [openNew, setOpenNew] = useState(false);
+  const [rescheduling, setRescheduling] = useState<Booking | null>(null);
 
   const day = useMemo(() => addDays(startOfDay(new Date()), dayOffset), [dayOffset]);
   const dayEnd = useMemo(() => addDays(day, 1), [day]);
@@ -259,16 +261,21 @@ function BookingsPage() {
                   </div>
                   <StatusBadge status={b.status} />
                   {(b.bookedById === user?.id || user?.role === "admin") && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={async () => {
-                        await bookingService.cancel(b.id, user!.id);
-                        toast.success("Booking cancelled");
-                      }}
-                    >
-                      Cancel
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => setRescheduling(b)}>
+                        Reschedule
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          await bookingService.cancel(b.id, user!.id);
+                          toast.success("Booking cancelled");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
@@ -282,7 +289,84 @@ function BookingsPage() {
           )}
         </CardContent>
       </Card>
+      {rescheduling && (
+        <RescheduleDialog
+          booking={rescheduling}
+          actorId={user!.id}
+          onClose={() => setRescheduling(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function RescheduleDialog({
+  booking,
+  actorId,
+  onClose,
+}: {
+  booking: Booking;
+  actorId: string;
+  onClose: () => void;
+}) {
+  const [date, setDate] = useState(format(new Date(booking.startAt), "yyyy-MM-dd"));
+  const [start, setStart] = useState(format(new Date(booking.startAt), "HH:mm"));
+  const [end, setEnd] = useState(format(new Date(booking.endAt), "HH:mm"));
+  const [error, setError] = useState("");
+
+  const submit = async () => {
+    setError("");
+    const startAt = new Date(`${date}T${start}:00`);
+    const endAt = new Date(`${date}T${end}:00`);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+      setError("Choose a valid start and end time.");
+      return;
+    }
+    try {
+      await bookingService.reschedule(
+        booking.id,
+        { startAt: startAt.toISOString(), endAt: endAt.toISOString() },
+        actorId,
+      );
+      toast.success("Booking rescheduled");
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to reschedule booking");
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reschedule Booking</DialogTitle>
+          <DialogDescription>
+            Move this booking to another non-overlapping time slot.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Date</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Start</Label>
+            <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>End</Label>
+            <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          </div>
+          {error && <p className="text-sm font-medium text-destructive sm:col-span-3">{error}</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={submit}>Save Schedule</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

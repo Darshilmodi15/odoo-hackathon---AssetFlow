@@ -4,7 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api.routes import allocations, auth, bookings, transfers, users
+from app.api.routes import allocations, assets, auth, bookings, organization, transfers, users
 from app.core.config import settings
 from app.db.session import get_session
 
@@ -31,6 +31,8 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix=settings.api_v1_str)
 app.include_router(users.router, prefix=settings.api_v1_str)
+app.include_router(organization.router, prefix=settings.api_v1_str)
+app.include_router(assets.router, prefix=settings.api_v1_str)
 app.include_router(allocations.router, prefix=settings.api_v1_str)
 app.include_router(transfers.router, prefix=settings.api_v1_str)
 app.include_router(bookings.router, prefix=settings.api_v1_str)

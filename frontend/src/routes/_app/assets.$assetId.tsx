@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, QrCode } from "lucide-react";
+import { ArrowLeft, FileText, ImageIcon, QrCode } from "lucide-react";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/_app/assets/$assetId")({ component: AssetDetailPage });
@@ -66,8 +66,12 @@ function AssetDetailPage() {
 
       <Card>
         <CardContent className="flex flex-wrap items-start gap-4 p-6">
-          <div className="grid h-24 w-24 shrink-0 place-items-center rounded-lg border-2 border-dashed border-border bg-muted/40">
-            <QrCode className="h-10 w-10 text-muted-foreground" />
+          <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/40">
+            {asset.photoUrl ? (
+              <img src={asset.photoUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <QrCode className="h-10 w-10 text-muted-foreground" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -101,7 +105,50 @@ function AssetDetailPage() {
                 <span className="text-muted-foreground">Cost:</span> ₹
                 {asset.acquisitionCost.toLocaleString("en-IN")}
               </div>
+              <div>
+                <span className="text-muted-foreground">QR Code:</span> {asset.tag}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Documents:</span>{" "}
+                {asset.documentUrl || asset.photoUrl ? "Available" : "—"}
+              </div>
             </div>
+            {(asset.photoUrl || asset.documentUrl) && (
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                {asset.photoUrl && (
+                  <a
+                    href={asset.photoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 hover:bg-accent"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                    {asset.photoName || asset.photoUrl}
+                  </a>
+                )}
+                {asset.documentUrl && (
+                  <a
+                    href={asset.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 hover:bg-accent"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-primary" />
+                    {asset.documentName || asset.documentUrl}
+                  </a>
+                )}
+              </div>
+            )}
+            {category?.customFields && category.customFields.length > 0 && (
+              <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                {category.customFields.map((field) => (
+                  <div key={field.key}>
+                    <span className="text-muted-foreground">{field.label}:</span>{" "}
+                    {asset.customFields?.[field.key] || "—"}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" asChild>

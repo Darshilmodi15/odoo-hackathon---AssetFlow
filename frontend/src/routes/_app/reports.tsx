@@ -50,6 +50,16 @@ function exportCsv(filename: string, rows: Record<string, unknown>[]) {
   URL.revokeObjectURL(url);
 }
 
+function downloadTextFile(filename: string, text: string, type = "text/html") {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function ReportsPage() {
   const assets = useStore(() => store.assets);
   const departments = useStore(() => store.departments);
@@ -121,6 +131,30 @@ function ReportsPage() {
     name: d.code,
     allocated: assets.filter((a) => a.departmentId === d.id && a.status === "allocated").length,
   }));
+
+  const bookingHeatmap = Array.from({ length: 12 }, (_, index) => {
+    const hour = index + 8;
+    const count = bookings.filter((booking) => {
+      const start = new Date(booking.startAt).getHours();
+      const end = new Date(booking.endAt).getHours();
+      return booking.status !== "cancelled" && start <= hour && end > hour;
+    }).length;
+    return { hour: `${String(hour).padStart(2, "0")}:00`, count };
+  });
+
+  const exportHtmlReport = () => {
+    const rows = filteredAssets
+      .map(
+        (asset) =>
+          `<tr><td>${asset.tag}</td><td>${asset.name}</td><td>${asset.status}</td><td>${asset.condition}</td><td>${asset.location}</td></tr>`,
+      )
+      .join("");
+    downloadTextFile(
+      "assetflow-report.html",
+      `<!doctype html><html><head><meta charset="utf-8"><title>AssetFlow Report</title><style>body{font-family:Inter,Arial,sans-serif;margin:32px;color:#17212b}h1{margin-bottom:4px}.muted{color:#667085}table{border-collapse:collapse;width:100%;margin-top:24px}th,td{border:1px solid #d0d5dd;padding:8px;text-align:left}th{background:#f2f4f7}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px}.card{border:1px solid #d0d5dd;border-radius:8px;padding:12px}.value{font-size:24px;font-weight:700}</style></head><body><h1>AssetFlow Operational Report</h1><div class="muted">Generated ${new Date().toLocaleString()}</div><div class="grid"><div class="card"><div>Assets</div><div class="value">${filteredAssets.length}</div></div><div class="card"><div>Overdue Returns</div><div class="value">${overdueAllocs}</div></div><div class="card"><div>Idle Assets</div><div class="value">${idleAssets.length}</div></div><div class="card"><div>Bookings</div><div class="value">${bookings.length}</div></div></div><table><thead><tr><th>Tag</th><th>Name</th><th>Status</th><th>Condition</th><th>Location</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,
+    );
+    toast.success("HTML report exported");
+  };
 
   const COLORS = [
     "oklch(0.62 0.15 160)",
@@ -207,13 +241,9 @@ function ReportsPage() {
                 <Download className="mr-1 h-4 w-4" />
                 Export CSV
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toast.info("PDF export will connect to backend service")}
-              >
+              <Button variant="outline" size="sm" onClick={exportHtmlReport}>
                 <FileText className="mr-1 h-4 w-4" />
-                Export PDF
+                Export Report
               </Button>
             </div>
           </div>
@@ -375,6 +405,27 @@ function ReportsPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total maintenance requests</span>
               <b>{maintenance.length}</b>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Resource booking heatmap</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {bookingHeatmap.map((slot) => (
+                <div key={slot.hour} className="rounded-md border bg-card p-3">
+                  <div className="text-xs text-muted-foreground">{slot.hour}</div>
+                  <div className="mt-1 text-2xl font-semibold">{slot.count}</div>
+                  <div className="mt-2 h-1.5 rounded-full bg-muted">
+                    <div
+                      className="h-1.5 rounded-full bg-primary"
+                      style={{ width: `${Math.min(100, slot.count * 25)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
