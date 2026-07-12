@@ -77,12 +77,21 @@ function LandingPage() {
               Contact
             </a>
           </div>
-          <Link
-            to="/login"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-          >
-            Sign In
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/login"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+            >
+              Log In
+            </Link>
+
+            <Link
+              to="/signup"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+            >
+              Sign In
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -104,10 +113,18 @@ function LandingPage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 font-semibold text-primary-foreground hover:bg-primary/90"
             >
-              Sign In <ArrowRight className="h-4 w-4" />
+              Employee Portal
             </Link>
+
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-md border bg-card px-6 py-3 font-semibold hover:bg-accent"
+            >
+              Management Portal
+            </Link>
+
             <a
               href="#features"
               className="rounded-md border bg-card px-6 py-3 text-center font-semibold shadow-sm hover:bg-accent"
