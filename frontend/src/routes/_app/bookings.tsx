@@ -31,7 +31,7 @@ import { Plus, AlertTriangle, Calendar as CalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format, addDays, startOfDay } from "date-fns";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/bookings")({ component: BookingsPage });
 
@@ -41,6 +41,17 @@ interface BookingConflictErr {
   code: string;
   conflict: { assetId: string; startAt: string; endAt: string };
   suggestions: { assetId: string; startAt: string; endAt: string; reason: string }[];
+}
+
+interface BookingFormState {
+  assetId: string;
+  date: string;
+  start: string;
+  end: string;
+  purpose: string;
+  departmentId: string;
+  attendees: number;
+  notes: string;
 }
 
 function BookingsPage() {
@@ -143,7 +154,7 @@ function BookingsPage() {
                         <span className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
                       </div>
                     )}
-                    
+
                     {dayBookings.map((b) => {
                       const bs = new Date(b.startAt),
                         be = new Date(b.endAt);
@@ -167,19 +178,38 @@ function BookingsPage() {
                                 }}
                               >
                                 <div className="truncate leading-none">{b.purpose}</div>
-                                <div className="truncate opacity-90 text-[9px] mt-0.5 font-normal leading-none">{emp?.name}</div>
+                                <div className="truncate opacity-90 text-[9px] mt-0.5 font-normal leading-none">
+                                  {emp?.name}
+                                </div>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-popover border border-border p-3 rounded-lg shadow-lg text-popover-foreground">
+                            <TooltipContent
+                              side="top"
+                              className="bg-popover border border-border p-3 rounded-lg shadow-lg text-popover-foreground"
+                            >
                               <div className="space-y-1">
                                 <p className="font-semibold text-sm text-foreground">{b.purpose}</p>
-                                <p className="text-xs"><span className="font-medium text-muted-foreground">Booked By:</span> {emp?.name || "Unknown"}</p>
-                                {dept && <p className="text-xs"><span className="font-medium text-muted-foreground">Department:</span> {dept.name}</p>}
+                                <p className="text-xs">
+                                  <span className="font-medium text-muted-foreground">
+                                    Booked By:
+                                  </span>{" "}
+                                  {emp?.name || "Unknown"}
+                                </p>
+                                {dept && (
+                                  <p className="text-xs">
+                                    <span className="font-medium text-muted-foreground">
+                                      Department:
+                                    </span>{" "}
+                                    {dept.name}
+                                  </p>
+                                )}
                                 <p className="text-xs font-mono text-primary font-medium">
                                   {format(bs, "HH:mm")} - {format(be, "HH:mm")}
                                 </p>
                                 {b.notes && (
-                                  <p className="text-[10px] italic border-t border-border mt-1 pt-1 text-muted-foreground max-w-xs">{b.notes}</p>
+                                  <p className="text-[10px] italic border-t border-border mt-1 pt-1 text-muted-foreground max-w-xs">
+                                    {b.notes}
+                                  </p>
                                 )}
                               </div>
                             </TooltipContent>
@@ -256,8 +286,6 @@ function BookingsPage() {
   );
 }
 
-import { cn } from "@/lib/utils";
-
 function BookingDialog({
   actorId,
   initialAssetId,
@@ -271,7 +299,7 @@ function BookingDialog({
 }) {
   const assets = useStore(() => store.assets.filter((a) => a.shared));
   const departments = useStore(() => store.departments);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<BookingFormState>({
     assetId: initialAssetId,
     date: initialDate,
     start: "09:00",
@@ -284,7 +312,7 @@ function BookingDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState<BookingConflictErr | null>(null);
 
-  const updateField = (key: string, value: any) => {
+  const updateField = <K extends keyof BookingFormState>(key: K, value: BookingFormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
     if (errors[key]) {
       setErrors((errs) => {
@@ -396,11 +424,10 @@ function BookingDialog({
       <div className="space-y-3">
         <div className="space-y-2">
           <Label className={cn(errors.assetId && "text-destructive")}>Resource *</Label>
-          <Select
-            value={form.assetId}
-            onValueChange={(v) => updateField("assetId", v)}
-          >
-            <SelectTrigger className={cn(errors.assetId && "border-destructive focus:ring-destructive")}>
+          <Select value={form.assetId} onValueChange={(v) => updateField("assetId", v)}>
+            <SelectTrigger
+              className={cn(errors.assetId && "border-destructive focus:ring-destructive")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -424,9 +451,7 @@ function BookingDialog({
               className={cn(errors.date && "border-destructive focus-visible:ring-destructive")}
               onChange={(e) => updateField("date", e.target.value)}
             />
-            {errors.date && (
-              <p className="text-xs font-medium text-destructive">{errors.date}</p>
-            )}
+            {errors.date && <p className="text-xs font-medium text-destructive">{errors.date}</p>}
           </div>
           <div className="space-y-2">
             <Label className={cn(errors.start && "text-destructive")}>Start *</Label>
@@ -436,9 +461,7 @@ function BookingDialog({
               className={cn(errors.start && "border-destructive focus-visible:ring-destructive")}
               onChange={(e) => updateField("start", e.target.value)}
             />
-            {errors.start && (
-              <p className="text-xs font-medium text-destructive">{errors.start}</p>
-            )}
+            {errors.start && <p className="text-xs font-medium text-destructive">{errors.start}</p>}
           </div>
           <div className="space-y-2">
             <Label className={cn(errors.end && "text-destructive")}>End *</Label>
@@ -448,9 +471,7 @@ function BookingDialog({
               className={cn(errors.end && "border-destructive focus-visible:ring-destructive")}
               onChange={(e) => updateField("end", e.target.value)}
             />
-            {errors.end && (
-              <p className="text-xs font-medium text-destructive">{errors.end}</p>
-            )}
+            {errors.end && <p className="text-xs font-medium text-destructive">{errors.end}</p>}
           </div>
         </div>
         <div className="space-y-2">
@@ -467,10 +488,7 @@ function BookingDialog({
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
             <Label>Department</Label>
-            <Select
-              value={form.departmentId}
-              onValueChange={(v) => updateField("departmentId", v)}
-            >
+            <Select value={form.departmentId} onValueChange={(v) => updateField("departmentId", v)}>
               <SelectTrigger>
                 <SelectValue placeholder="None" />
               </SelectTrigger>
@@ -545,16 +563,6 @@ function BookingDialog({
             )}
           </div>
         )}
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button onClick={submit}>Confirm Booking</Button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
